@@ -250,7 +250,7 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
             (data.state as? Load.Ok<com.petitjord.tivihome.data.SeriesInfo>)?.data?.trailer?.let { t ->
                 FocusBox(
                     onClick = { openTrailer(ctx, t) },
-                    background = Panel,
+                    background = Glass,
                     modifier = Modifier.fillMaxWidth().height(42.dp),
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("▶ Bande-annonce", color = Color.White) }
@@ -259,7 +259,7 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
             val fav = series.favKey in AppRepo.favorites
             FocusBox(
                 onClick = { toggleFav(ctx, series.favKey, series.name) },
-                background = Panel,
+                background = Glass,
                 modifier = Modifier.fillMaxWidth().height(42.dp),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

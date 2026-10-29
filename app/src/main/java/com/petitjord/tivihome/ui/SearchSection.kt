@@ -118,7 +118,7 @@ private fun SearchContent(d: SearchData, nav: Nav) {
                                 FocusBox(
                                     onClick = { nav.playLive(channels, i) },
                                     onLongClick = { toggleFav(ctx, ch.favKey, ch.name) },
-                                    background = Panel,
+                                    background = Glass,
                                     scaleOnFocus = 1.06f,
                                     modifier = Modifier.width(150.dp).height(120.dp),
                                 ) {
@@ -145,7 +145,7 @@ private fun SearchContent(d: SearchData, nav: Nav) {
                                     android.widget.Toast.makeText(ctx, if (on) "Rappel ajouté" else "Rappel supprimé", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            background = Panel,
+                            background = Glass,
                             modifier = Modifier.fillMaxWidth().height(58.dp),
                         ) {
                             androidx.compose.foundation.layout.Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -316,6 +316,15 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
                     Spacer(Modifier.width(12.dp))
                 }
                 Text(ch.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(14.dp))
+                Row(
+                    Modifier.background(Color(0x33FF4D5E), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    LiveDot(7.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text("EN DIRECT", color = Color(0xFFFF8A95), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                }
                 if (ch.favKey in AppRepo.favorites) {
                     Spacer(Modifier.width(10.dp)); Text("★", color = Gold, fontSize = 20.sp)
                 }

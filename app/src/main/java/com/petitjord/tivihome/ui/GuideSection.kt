@@ -136,7 +136,7 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
 
 @Composable
 private fun GuideHeader(f: Focused?, modifier: Modifier) {
-    Row(modifier.background(Panel).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.padding(start = 8.dp, end = 12.dp, top = 10.dp).glass(RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         if (f == null) {
             Text("Guide TV — OK : regarder · OK maintenu sur une émission à venir : rappel", color = TextDim)
         } else {
@@ -160,7 +160,7 @@ private fun GuideHeader(f: Focused?, modifier: Modifier) {
 
 @Composable
 private fun TimeRuler(windowStart: Long, hScroll: ScrollState) {
-    Row(Modifier.fillMaxWidth().height(28.dp).background(Color(0xFF10141B))) {
+    Row(Modifier.fillMaxWidth().height(28.dp)) {
         Box(Modifier.width(CHANNEL_CELL).fillMaxHeight(), contentAlignment = Alignment.Center) {
             Text("Aujourd'hui", color = TextDim, fontSize = 12.sp)
         }
@@ -193,7 +193,7 @@ private fun GuideRow(
 
     Row(Modifier.fillMaxWidth().height(ROW_HEIGHT).padding(vertical = 1.dp)) {
         Row(
-            Modifier.width(CHANNEL_CELL).fillMaxHeight().background(Panel).padding(horizontal = 8.dp),
+            Modifier.width(CHANNEL_CELL).fillMaxHeight().background(Glass, RoundedCornerShape(10.dp)).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChannelLogo(ch.icon, ch.name, Modifier.size(width = 52.dp, height = 34.dp))

@@ -212,7 +212,7 @@ fun ChannelRow(
 @Composable
 private fun PreviewPanel(ch: Channel?, modifier: Modifier) {
     val tv = LocalTvPlayer.current
-    Column(modifier.background(Panel).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier.padding(10.dp).glass(RoundedCornerShape(22.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)).background(Color.Black),
             contentAlignment = Alignment.Center,

@@ -76,7 +76,7 @@ fun CategoryColumn(
     menuFor?.let { g -> GroupMenu(g, onDismiss = { menuFor = null }, onChanged = { if (AppRepo.groupInvisible(g.id)) onSelect(ALL) }) }
     LazyColumn(
         state = state,
-        modifier = modifier.width(200.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
+        modifier = modifier.width(200.dp).fillMaxHeight().padding(vertical = 10.dp).glass(RoundedCornerShape(20.dp)).focusRestorer(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -132,12 +132,13 @@ fun Poster(
         focusRequester = focusRequester,
         background = Panel2,
         scaleOnFocus = 1.06f,
+        shape = RoundedCornerShape(14.dp),
         modifier = modifier.aspectRatio(2f / 3f),
     ) { focused ->
         if (image != null) {
             AsyncImage(
                 model = image, contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
             )
         } else {
             Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
@@ -165,7 +166,7 @@ fun Poster(
 @Composable
 fun SectionHeader(text: String, sub: String? = null) {
     Row(Modifier.padding(start = 4.dp, top = 6.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
-        Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
         if (sub != null) {
             Spacer(Modifier.width(10.dp))
             Text(sub, color = TextDim, fontSize = 14.sp)

@@ -1,6 +1,9 @@
 package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +112,12 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
             }
         }
 
+        // À la une : carrousel des derniers films ajoutés
+        val featured = recentMovies.filter { it.added > 0 }.take(6)
+        if (featured.isNotEmpty()) {
+            item { FeaturedCarousel(featured, nav, takeFirst()) }
+        }
+
         val upcoming = reminders.filter { it.start > now - 5 * 60_000 }.sortedBy { it.start }
         if (upcoming.isNotEmpty()) {
             item { SectionHeader("Tes rappels", "${upcoming.size}") }
@@ -122,7 +131,7 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                                 AppRepo.dropReminder(r)
                                 android.widget.Toast.makeText(ctx, "Rappel supprimé", android.widget.Toast.LENGTH_SHORT).show()
                             },
-                            background = Panel,
+                            background = Glass,
                             modifier = Modifier.width(260.dp).height(84.dp),
                         ) {
                             Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
@@ -217,7 +226,7 @@ private fun LiveCard(ch: Channel, now: Long, requester: FocusRequester?, onClick
     FocusBox(
         onClick = onClick,
         focusRequester = requester,
-        background = Panel,
+        background = Glass,
         scaleOnFocus = 1.05f,
         modifier = Modifier.width(240.dp).height(128.dp),
     ) { focused ->
@@ -236,6 +245,68 @@ private fun LiveCard(ch: Channel, now: Long, requester: FocusRequester?, onClick
                     trackColor = Color(0x22FFFFFF),
                     modifier = Modifier.fillMaxWidth().height(3.dp),
                 )
+            }
+        }
+    }
+}
+
+/** Grand bandeau « À la une » qui défile tout seul toutes les 8 secondes (sauf quand on y est). */
+@Composable
+private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequester?) {
+    var index by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var hasFocus by remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(hasFocus, movies) {
+        while (!hasFocus) {
+            delay(8_000)
+            index = (index + 1) % movies.size
+        }
+    }
+    val m = movies[index.coerceIn(0, movies.lastIndex)]
+    val info = rememberLoad("vodinfo-${m.streamId}") { AppRepo.vodInfo(m) }
+    val details = (info.state as? Load.Ok<com.petitjord.tivihome.data.MovieInfo>)?.data
+
+    Box(
+        Modifier.fillMaxWidth().height(290.dp).padding(bottom = 6.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+            .border(1.dp, GlassStroke, androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+            .onFocusChanged { hasFocus = it.hasFocus },
+    ) {
+        androidx.compose.animation.Crossfade(targetState = details?.backdrop ?: m.poster, animationSpec = androidx.compose.animation.core.tween(700), label = "hero") { img ->
+            Box(Modifier.fillMaxSize().background(Color(0xFF111622))) {
+                if (img != null) {
+                    coil.compose.AsyncImage(
+                        img, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+        // Dégradés de lisibilité
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xF00B0E13), Color(0xB30B0E13), Color(0x000B0E13)))))
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0x990B0E13)))))
+
+        Column(Modifier.align(Alignment.CenterStart).padding(start = 32.dp, end = 32.dp).fillMaxWidth(0.55f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Accent, Accent2)), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 3.dp)) {
+                    Text("NOUVEAU", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                }
+                listOfNotNull(details?.year, details?.genre?.substringBefore(","), (details?.rating ?: m.rating)?.takeIf { it.isNotBlank() && it != "0" }?.let { "★ $it" })
+                    .joinToString("  ·  ").takeIf { it.isNotBlank() }?.let {
+                        Text("   $it", color = Color(0xFFD7DCE5), fontSize = 13.sp)
+                    }
+            }
+            Text(m.name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 38.sp)
+            details?.plot?.let { Text(it, color = Color(0xFFC9D1DC), fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, lineHeight = 19.sp) }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
+                ActionButton("▶  Lecture", primary = true, requester = requester) { nav.playVod(movieItem(m)) }
+                ActionButton("Détails") { nav.openMovie(m) }
+            }
+        }
+        // Points de pagination
+        Row(Modifier.align(Alignment.BottomEnd).padding(22.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            movies.indices.forEach { i ->
+                val w by androidx.compose.animation.core.animateDpAsState(if (i == index) 22.dp else 7.dp, label = "dot")
+                Box(Modifier.width(w).height(7.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)).background(if (i == index) Accent else Color(0x66FFFFFF)))
             }
         }
     }

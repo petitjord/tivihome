@@ -72,7 +72,8 @@ class Nav(
 fun App() {
     var loggedIn by remember { mutableStateOf(AppRepo.client != null) }
     var session by remember { mutableStateOf(0) }
-    Box(Modifier.fillMaxSize().background(Bg)) {
+    Box(Modifier.fillMaxSize()) {
+        AuroraBackground()
         if (!loggedIn) {
             LoginScreen(onLoggedIn = { loggedIn = true })
         } else {
@@ -201,7 +202,10 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
         ) {
             AnimatedContent(
                 targetState = stack.last(),
-                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
+                transitionSpec = {
+                    (fadeIn(tween(280)) + androidx.compose.animation.scaleIn(tween(320), initialScale = 0.96f)) togetherWith
+                        (fadeOut(tween(180)) + androidx.compose.animation.scaleOut(tween(220), targetScale = 1.02f))
+                },
                 label = "screen",
             ) { top ->
                 when (top) {

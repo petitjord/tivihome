@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,7 +80,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var railOpen by remember { mutableStateOf(false) }
     val railFocus = rememberInitialFocus(!focusContent)
-    val railWidth by animateDpAsState(if (railOpen) 210.dp else 72.dp, tween(220), label = "rail")
+    val railWidth by animateDpAsState(if (railOpen) 220.dp else 72.dp, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 420f), label = "rail")
 
     // Seule la section « TV en direct » garde l'aperçu vidéo en marche.
     LaunchedEffect(selected) {
@@ -88,7 +92,10 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         Box(Modifier.fillMaxSize().padding(start = 72.dp)) {
             AnimatedContent(
                 targetState = selected,
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) },
+                transitionSpec = {
+                    (fadeIn(tween(260)) + androidx.compose.animation.slideInVertically(tween(320)) { it / 24 }) togetherWith
+                        fadeOut(tween(140))
+                },
                 label = "section",
             ) { s ->
                 when (s) {
@@ -105,55 +112,78 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
             }
         }
 
-        // Menu latéral : replié en icônes, il s'ouvre par-dessus le contenu quand on y entre.
-        Column(
+        // Menu latéral flottant en verre : replié en icônes, il s'ouvre quand on y entre.
+        // Un indicateur lumineux glisse jusqu'à la section active.
+        val itemH = 40.dp
+        val gap = 4.dp
+        val headerH = 54.dp
+        val indicatorY by animateDpAsState(
+            headerH + (itemH + gap) * selected,
+            androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 380f),
+            label = "indicator",
+        )
+        Box(
             Modifier
-                .width(railWidth)
+                .padding(start = 8.dp, top = 10.dp, bottom = 10.dp)
+                .width(railWidth - 8.dp)
                 .fillMaxHeight()
-                .background(
-                    Brush.horizontalGradient(
-                        if (railOpen) listOf(Panel, Panel, Color(0xF0141922)) else listOf(Panel, Panel),
-                    ),
+                .then(
+                    if (railOpen) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
+                    else Modifier,
                 )
+                .glass(RoundedCornerShape(24.dp), strong = railOpen)
+                .background(if (railOpen) GlassDark else Color.Transparent)
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
-                .padding(horizontal = 12.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(horizontal = 8.dp, vertical = 14.dp),
         ) {
-            Box(Modifier.height(56.dp).padding(start = 8.dp), contentAlignment = Alignment.CenterStart) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LogoMark()
-                    AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                        Text(
-                            "Tivihome", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 10.dp), maxLines = 1,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            sections.forEachIndexed { i, s ->
-                val isSel = i == selected
-                FocusBox(
-                    onClick = { selected = i },
-                    focusRequester = if (isSel) railFocus else null,
-                    background = if (isSel) AccentDim else Color.Transparent,
-                    modifier = Modifier.fillMaxWidth().height(46.dp),
-                ) { focused ->
-                    Row(
-                        Modifier.fillMaxSize().padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            s.icon, s.label, modifier = Modifier.size(22.dp),
-                            tint = if (isSel || focused) Color.White else TextDim,
-                        )
+            // Indicateur de la section active
+            Box(
+                Modifier
+                    .offset(y = indicatorY)
+                    .fillMaxWidth()
+                    .height(itemH)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Brush.horizontalGradient(listOf(Accent.copy(alpha = 0.38f), Accent2.copy(alpha = 0.20f)))),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LogoMark(28.dp)
                         AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
                             Text(
-                                s.label, maxLines = 1, fontSize = 15.sp,
-                                color = if (isSel || focused) Color.White else TextDim,
-                                modifier = Modifier.padding(start = 14.dp),
+                                "Tivihome", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.3).sp, modifier = Modifier.padding(start = 10.dp), maxLines = 1,
                             )
+                        }
+                    }
+                }
+                sections.forEachIndexed { i, s ->
+                    val isSel = i == selected
+                    FocusBox(
+                        onClick = { selected = i },
+                        focusRequester = if (isSel) railFocus else null,
+                        background = Color.Transparent,
+                        focusedBackground = Color(0x1FFFFFFF),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth().height(itemH),
+                    ) { focused ->
+                        Row(
+                            Modifier.fillMaxSize().padding(horizontal = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                s.icon, s.label, modifier = Modifier.size(20.dp),
+                                tint = if (isSel || focused) Color.White else TextDim,
+                            )
+                            AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                                Text(
+                                    s.label, maxLines = 1, fontSize = 15.sp,
+                                    fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (isSel || focused) Color.White else TextDim,
+                                    modifier = Modifier.padding(start = 14.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -167,7 +197,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 fun LogoMark(size: androidx.compose.ui.unit.Dp = 26.dp) {
     Box(
         Modifier.size(size).background(
-            Brush.linearGradient(listOf(Accent, Color(0xFF7C5CFF))),
+            Brush.linearGradient(listOf(Accent, Accent2)),
             androidx.compose.foundation.shape.RoundedCornerShape(size / 4),
         ),
         contentAlignment = Alignment.Center,

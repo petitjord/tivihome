@@ -1,7 +1,11 @@
 package com.petitjord.tivihome.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,7 +58,7 @@ fun FocusBox(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onFocus: (() -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(8.dp),
+    shape: Shape = RoundedCornerShape(12.dp),
     background: Color = Color.Transparent,
     focusedBackground: Color = Panel2,
     scaleOnFocus: Float = 1f,
@@ -68,18 +72,35 @@ fun FocusBox(
     val longClick by rememberUpdatedState(onLongClick)
     val focus by rememberUpdatedState(onFocus)
 
-    // Transitions douces au passage du focus
-    val scale by animateFloatAsState(if (focused) scaleOnFocus else 1f, tween(160), label = "scale")
-    val bg by animateColorAsState(if (focused) focusedBackground else background, tween(160), label = "bg")
-    val borderColor by animateColorAsState(if (focused) Accent else Color.Transparent, tween(160), label = "border")
+    // Focus : léger ressort, halo coloré et bordure en dégradé
+    val scale by animateFloatAsState(
+        if (focused) scaleOnFocus else 1f,
+        spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow),
+        label = "scale",
+    )
+    val bg by animateColorAsState(if (focused) focusedBackground else background, tween(180), label = "bg")
+    val glowAlpha by animateFloatAsState(if (focused) 1f else 0f, tween(220), label = "glow")
 
     Box(
         modifier
             .graphicsLayer {
                 scaleX = scale; scaleY = scale
             }
+            .then(
+                if (glowAlpha > 0.01f) {
+                    Modifier.shadow(
+                        elevation = (22 * glowAlpha).dp, shape = shape,
+                        ambientColor = Accent.copy(alpha = 0.55f * glowAlpha),
+                        spotColor = Accent.copy(alpha = 0.75f * glowAlpha),
+                    )
+                } else Modifier,
+            )
             .background(bg, shape)
-            .border(2.dp, borderColor, shape)
+            .border(
+                2.dp,
+                Brush.linearGradient(listOf(Accent.copy(alpha = glowAlpha), Accent2.copy(alpha = glowAlpha))),
+                shape,
+            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused && !focused) focus?.invoke()
@@ -162,9 +183,7 @@ fun <T> rememberLoad(key: Any?, loader: suspend () -> T): Loaded<T> {
 @Composable
 fun <T> LoadView(loaded: Loaded<T>, content: @Composable (T) -> Unit) {
     when (val s = loaded.state) {
-        is Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Accent)
-        }
+        is Load.Loading -> SkeletonScreen()
         is Load.Err -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Erreur : ${s.message}", color = Color.White, textAlign = TextAlign.Center)

@@ -68,10 +68,15 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-            Modifier.width(520.dp).verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.width(540.dp).glass(androidx.compose.foundation.shape.RoundedCornerShape(28.dp), strong = true)
+                .verticalScroll(rememberScrollState()).padding(32.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Tivihome", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Accent)
+            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                LogoMark(44.dp)
+                Spacer(Modifier.width(14.dp))
+                Text("Tivihome", fontSize = 38.sp, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = (-0.8).sp)
+            }
             Text("Connexion Xtream Codes", color = TextDim, fontSize = 18.sp)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(

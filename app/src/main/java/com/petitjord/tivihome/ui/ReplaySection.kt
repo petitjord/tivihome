@@ -89,7 +89,7 @@ private fun ReplayContent(channels: List<Channel>, nav: Nav, focusContent: Boole
     Row(Modifier.fillMaxSize()) {
         // Chaînes avec replay
         LazyColumn(
-            modifier = Modifier.width(270.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
+            modifier = Modifier.width(270.dp).fillMaxHeight().padding(vertical = 10.dp).glass(RoundedCornerShape(20.dp)).focusRestorer(),
             contentPadding = PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -180,7 +180,7 @@ private fun ReplayContent(channels: List<Channel>, nav: Nav, focusContent: Boole
 private fun ReplayRow(p: Programme, onClick: () -> Unit) {
     FocusBox(
         onClick = onClick,
-        background = Panel,
+        background = Glass,
         focusedBackground = Color(0xFF243044),
         scaleOnFocus = 1.01f,
         modifier = Modifier.fillMaxWidth().height(66.dp),
