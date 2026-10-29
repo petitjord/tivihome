@@ -72,8 +72,24 @@ class Nav(
 fun App() {
     var loggedIn by remember { mutableStateOf(AppRepo.client != null) }
     var session by remember { mutableStateOf(0) }
+    var crash by remember { mutableStateOf(AppRepo.lastCrash) }
     Box(Modifier.fillMaxSize()) {
         AuroraBackground()
+        crash?.let { c ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { AppRepo.clearCrash(); crash = null },
+                containerColor = Panel,
+                title = { Text("Tivihome s'est fermé la dernière fois", color = Color.White) },
+                text = {
+                    Text(
+                        "Prends cet écran en photo et envoie-le pour que le problème soit corrigé :\n\n" +
+                            c.lines().take(8).joinToString("\n"),
+                        color = TextDim, fontSize = 12.sp,
+                    )
+                },
+                confirmButton = { DialogButton("OK", requestFocus = true) { AppRepo.clearCrash(); crash = null } },
+            )
+        }
         if (!loggedIn) {
             LoginScreen(onLoggedIn = { loggedIn = true })
         } else {

@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bannière affichée sur l'écran d'accueil Android TV (320x180) -->
+<!-- Bannière Android TV (320x180) : fond nuit, tuile du logo, halo -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="320dp"
-    android:height="180dp"
-    android:viewportWidth="320"
-    android:viewportHeight="180">
-    <path android:fillColor="#FF0B0E13" android:pathData="M0,0 L320,0 L320,180 L0,180 Z" />
-    <path android:fillColor="#FF141922" android:pathData="M0,120 L320,120 L320,180 L0,180 Z" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF3DB2FF"
-        android:strokeWidth="6"
-        android:pathData="M110,30 L210,30 Q218,30 218,38 L218,92 Q218,100 210,100 L110,100 Q102,100 102,92 L102,38 Q102,30 110,30 Z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M168,38 L142,68 L158,68 L152,92 L180,60 L164,60 Z" />
-    <path android:fillColor="#FF3DB2FF" android:pathData="M60,145 L260,145 L260,153 L60,153 Z" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp" android:height="180dp"
+    android:viewportWidth="320" android:viewportHeight="180">
+    <path android:fillColor="#FF0B0E13" android:pathData="M0,0h320v180h-320z" />
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="90" android:centerY="60" android:gradientRadius="200"
+                android:startColor="#553DB2FF" android:endColor="#000B0E13" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M120,40 h80 a20,20 0 0 1 20,20 v60 a20,20 0 0 1 -20,20 h-80 a20,20 0 0 1 -20,-20 v-60 a20,20 0 0 1 20,-20 z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="100" android:startY="40" android:endX="220" android:endY="140"
+                android:startColor="#FF3DB2FF" android:endColor="#FF8C6BFF" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M160,58 L188,82 L182,82 L182,118 Q182,121 179,121 L141,121 Q138,121 138,118 L138,82 L132,82 Z" />
+    <path android:fillColor="#FF5C8DFF" android:pathData="M154,88 L154,110 L172,99 Z" />
 </vector>

@@ -23,6 +23,8 @@ object AppTheme {
     var accentIndex by mutableStateOf(0)
     /** Noir pur pour les écrans OLED. */
     var oled by mutableStateOf(false)
+    /** Effets complets (fond animé, halos) : désactivés par défaut pour la fluidité. */
+    var richEffects by mutableStateOf(false)
 }
 
 val Accent: Color get() = AccentChoices[AppTheme.accentIndex.coerceIn(0, AccentChoices.lastIndex)].second

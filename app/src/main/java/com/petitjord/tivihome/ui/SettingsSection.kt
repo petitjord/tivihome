@@ -89,6 +89,11 @@ fun SettingsSection(nav: Nav) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Choice("Effets légers (fluide)", !AppTheme.richEffects) { AppRepo.setRichEffects(false) }
+            Choice("Effets complets", AppTheme.richEffects) { AppRepo.setRichEffects(true) }
+        }
+        Text("Les effets complets ajoutent un fond animé et des halos lumineux ; à réserver aux boîtiers puissants.", color = TextDim, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Choice("Fond bleu nuit", !AppTheme.oled) { AppRepo.setOled(false) }
             Choice("Noir pur (OLED)", AppTheme.oled) { AppRepo.setOled(true) }
         }

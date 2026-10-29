@@ -87,7 +87,7 @@ fun FocusBox(
                 scaleX = scale; scaleY = scale
             }
             .then(
-                if (glowAlpha > 0.01f) {
+                if (AppTheme.richEffects && glowAlpha > 0.01f) {
                     Modifier.shadow(
                         elevation = (22 * glowAlpha).dp, shape = shape,
                         ambientColor = Accent.copy(alpha = 0.55f * glowAlpha),

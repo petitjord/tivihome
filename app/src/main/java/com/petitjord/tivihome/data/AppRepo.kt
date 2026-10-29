@@ -105,6 +105,7 @@ object AppRepo {
         accounts = readAccounts()
         com.petitjord.tivihome.ui.AppTheme.accentIndex = prefs.getInt("accent", 0)
         com.petitjord.tivihome.ui.AppTheme.oled = prefs.getBoolean("oled", false)
+        com.petitjord.tivihome.ui.AppTheme.richEffects = prefs.getBoolean("rich", false)
         val server = prefs.getString("server", null)
         val user = prefs.getString("user", null)
         val pass = prefs.getString("pass", null)
@@ -260,6 +261,10 @@ object AppRepo {
     /** Groupe nécessitant le code avant d'afficher son contenu ? */
     fun groupNeedsPin(id: String) = id in lockedGroups && parentalPin != null && !unlocked
 
+    // ---------- Dernier plantage ----------
+    val lastCrash: String? get() = prefs.getString("lastCrash", null)
+    fun clearCrash() { prefs.edit().remove("lastCrash").apply() }
+
     // ---------- Dernier essai de connexion (prérempli) ----------
     val lastTriedServer: String get() = prefs.getString("tryServer", "") ?: ""
     val lastTriedUser: String get() = prefs.getString("tryUser", "") ?: ""
@@ -270,6 +275,7 @@ object AppRepo {
     // ---------- Réglages ----------
 
     fun setAccent(i: Int) { com.petitjord.tivihome.ui.AppTheme.accentIndex = i; prefs.edit().putInt("accent", i).apply() }
+    fun setRichEffects(on: Boolean) { com.petitjord.tivihome.ui.AppTheme.richEffects = on; prefs.edit().putBoolean("rich", on).apply() }
     fun setOled(on: Boolean) { com.petitjord.tivihome.ui.AppTheme.oled = on; prefs.edit().putBoolean("oled", on).apply() }
     fun setStartLast(on: Boolean) { startOnLastChannel = on; prefs.edit().putBoolean("startLast", on).apply() }
     fun setSubSize(v: Int) { subtitleSize = v; prefs.edit().putInt("subSize", v).apply() }

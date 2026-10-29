@@ -128,7 +128,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                 .width(railWidth - 8.dp)
                 .fillMaxHeight()
                 .then(
-                    if (railOpen) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
+                    if (railOpen && AppTheme.richEffects) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
                     else Modifier,
                 )
                 .glass(RoundedCornerShape(24.dp), strong = railOpen)
@@ -192,16 +192,48 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
     }
 }
 
-/** Petit logo maison : un écran stylisé. */
+/**
+ * Logo Tivihome : une tuile en dégradé avec une maison stylisée
+ * dont la porte est un bouton lecture (TV + maison).
+ */
 @Composable
 fun LogoMark(size: androidx.compose.ui.unit.Dp = 26.dp) {
-    Box(
-        Modifier.size(size).background(
-            Brush.linearGradient(listOf(Accent, Accent2)),
-            androidx.compose.foundation.shape.RoundedCornerShape(size / 4),
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text("T", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size.value * 0.55f).sp)
+    val a1 = Accent
+    val a2 = Accent2
+    androidx.compose.foundation.Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val r = w * 0.27f
+        // Tuile
+        drawRoundRect(
+            brush = Brush.linearGradient(listOf(a1, a2), start = androidx.compose.ui.geometry.Offset(0f, 0f), end = androidx.compose.ui.geometry.Offset(w, w)),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r),
+        )
+        // Reflet discret en haut
+        drawRoundRect(
+            brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), endY = w * 0.5f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r),
+        )
+        // Maison : toit + corps
+        val house = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.50f, w * 0.20f)
+            lineTo(w * 0.80f, w * 0.46f)
+            lineTo(w * 0.73f, w * 0.46f)
+            lineTo(w * 0.73f, w * 0.78f)
+            quadraticBezierTo(w * 0.73f, w * 0.80f, w * 0.71f, w * 0.80f)
+            lineTo(w * 0.29f, w * 0.80f)
+            quadraticBezierTo(w * 0.27f, w * 0.80f, w * 0.27f, w * 0.78f)
+            lineTo(w * 0.27f, w * 0.46f)
+            lineTo(w * 0.20f, w * 0.46f)
+            close()
+        }
+        drawPath(house, Color.White)
+        // Porte = bouton lecture, couleur de la tuile
+        val play = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.44f, w * 0.52f)
+            lineTo(w * 0.44f, w * 0.72f)
+            lineTo(w * 0.61f, w * 0.62f)
+            close()
+        }
+        drawPath(play, Brush.linearGradient(listOf(a1, a2), start = androidx.compose.ui.geometry.Offset(0f, 0f), end = androidx.compose.ui.geometry.Offset(w, w)))
     }
 }

@@ -39,6 +39,27 @@ import kotlin.math.sin
  */
 @Composable
 fun AuroraBackground(modifier: Modifier = Modifier) {
+    if (AppTheme.richEffects) AnimatedAurora(modifier) else StaticAurora(modifier)
+}
+
+/** Version fixe, dessinée une seule fois : aucun coût pendant la navigation. */
+@Composable
+private fun StaticAurora(modifier: Modifier) {
+    val base = Bg
+    val a1 = Accent
+    val a2 = Accent2
+    val oled = AppTheme.oled
+    Canvas(modifier.fillMaxSize()) {
+        drawRect(base)
+        if (oled) return@Canvas
+        val w = size.width; val h = size.height
+        drawRect(Brush.radialGradient(listOf(a1.copy(alpha = 0.14f), Color.Transparent), center = Offset(w * 0.2f, h * 0.15f), radius = w * 0.55f))
+        drawRect(Brush.radialGradient(listOf(a2.copy(alpha = 0.11f), Color.Transparent), center = Offset(w * 0.85f, h * 0.9f), radius = w * 0.5f))
+    }
+}
+
+@Composable
+private fun AnimatedAurora(modifier: Modifier) {
     val t = rememberInfiniteTransition(label = "aurora")
     val phase by t.animateFloat(
         initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
@@ -56,8 +77,6 @@ fun AuroraBackground(modifier: Modifier = Modifier) {
         val c2 = Offset(w * (0.82f + 0.08f * sin(phase * 0.8f)), h * (0.86f + 0.10f * cos(phase * 1.2f)))
         drawRect(Brush.radialGradient(listOf(a1.copy(alpha = 0.16f), Color.Transparent), center = c1, radius = w * 0.55f))
         drawRect(Brush.radialGradient(listOf(a2.copy(alpha = 0.13f), Color.Transparent), center = c2, radius = w * 0.50f))
-        // Léger voile en haut pour la lisibilité des titres
-        drawRect(Brush.verticalGradient(listOf(Color(0x33000000), Color.Transparent), endY = h * 0.25f))
     }
 }
 

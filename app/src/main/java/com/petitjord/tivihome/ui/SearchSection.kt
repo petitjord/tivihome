@@ -54,7 +54,7 @@ private data class SearchData(val channels: List<Channel>, val movies: List<Movi
 
 /** Minuscules sans accents, pour une recherche tolérante. */
 fun fold(s: String): String =
-    Normalizer.normalize(s.lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "")
+    Normalizer.normalize(s.lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(marks, "")
 
 @Composable
 fun SearchSection(nav: Nav) {
@@ -76,20 +76,23 @@ private fun SearchContent(d: SearchData, nav: Nav) {
     val favs = AppRepo.favorites
 
     val words = remember(q) { fold(q).split(' ').filter { it.isNotBlank() } }
-    fun match(name: String): Boolean {
-        if (words.isEmpty()) return false
-        val n = fold(name)
-        return words.all { it in n }
+
+    // Index des noms sans accents, calculé une seule fois en arrière-plan
+    var index by remember(d) { mutableStateOf<SearchIndex?>(null) }
+    LaunchedEffect(d) {
+        index = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { SearchIndex.build(d) }
     }
-    val channels = remember(words, d) { d.channels.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
-    val movies = remember(words, d) { d.movies.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
-    val series = remember(words, d) { d.series.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
-    // Recherche dans le guide (si un guide XMLTV est chargé)
-    val onAir = remember(words, d) {
-        val g = AppRepo.xmltvGuide
-        if (g == null || words.isEmpty()) emptyList()
-        else g.search({ match(it) }).mapNotNull { (id, p) -> g.channelFor(id, d.channels)?.let { it to p } }
+    // Résultats calculés hors de l'interface : la saisie reste fluide même avec un énorme catalogue
+    var results by remember { mutableStateOf(SearchResults()) }
+    LaunchedEffect(words, index) {
+        val idx = index
+        results = if (idx == null || words.isEmpty() || words.joinToString("").length < 2) SearchResults()
+        else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { idx.find(words, d) }
     }
+    val channels = results.channels
+    val movies = results.movies
+    val series = results.series
+    val onAir = results.onAir
 
     Column(Modifier.fillMaxSize().padding(start = 24.dp, top = 22.dp, end = 24.dp)) {
         OutlinedTextField(
@@ -212,3 +215,43 @@ fun dayTime(ms: Long): String {
     }
     return "$day ${hm(ms)}"
 }
+
+private class SearchResults(
+    val channels: List<Channel> = emptyList(),
+    val movies: List<Movie> = emptyList(),
+    val series: List<Series> = emptyList(),
+    val onAir: List<Pair<Channel, com.petitjord.tivihome.data.Programme>> = emptyList(),
+)
+
+/** Noms déjà « pliés » (minuscules, sans accents) pour une recherche instantanée. */
+private class SearchIndex(val ch: Array<String>, val mv: Array<String>, val se: Array<String>) {
+    companion object {
+        fun build(d: SearchData) = SearchIndex(
+            Array(d.channels.size) { fold(d.channels[it].name) },
+            Array(d.movies.size) { fold(d.movies[it].name) },
+            Array(d.series.size) { fold(d.series[it].name) },
+        )
+    }
+
+    fun find(words: List<String>, d: SearchData): SearchResults {
+        fun hits(names: Array<String>): List<Int> {
+            val out = ArrayList<Int>()
+            for (i in names.indices) {
+                val n = names[i]
+                if (words.all { n.contains(it) }) { out += i; if (out.size >= 60) break }
+            }
+            return out
+        }
+        val channels = hits(ch).map { d.channels[it] }.filter { visibleCat(it.categoryId) }
+        val movies = hits(mv).map { d.movies[it] }.filter { visibleCat(it.categoryId) }
+        val series = hits(se).map { d.series[it] }.filter { visibleCat(it.categoryId) }
+        val g = AppRepo.xmltvGuide
+        val onAir = if (g == null) emptyList() else runCatching {
+            g.search({ t -> val f = fold(t); words.all { f.contains(it) } })
+                .mapNotNull { (id, p) -> g.channelFor(id, d.channels)?.let { it to p } }
+        }.getOrDefault(emptyList())
+        return SearchResults(channels, movies, series, onAir)
+    }
+}
+
+private val marks = Regex("\\p{Mn}+")

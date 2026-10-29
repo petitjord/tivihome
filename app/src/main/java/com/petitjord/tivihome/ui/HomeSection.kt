@@ -86,13 +86,10 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
     var firstAssigned = false
     fun takeFirst(): FocusRequester? = if (!firstAssigned) { firstAssigned = true; first } else null
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 28.dp, end = 20.dp, top = 24.dp, bottom = 40.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        item {
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 8.dp)) {
+    Column(Modifier.fillMaxSize()) {
+    // En-tête fixe : toujours visible, même quand la liste défile
+    Box(Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 10.dp)) {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     if (hour in 5..17) "Bonjour" else "Bonsoir",
                     color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold,
@@ -110,8 +107,12 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                 }
                 Text(hm(now), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
             }
-        }
-
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth().weight(1f),
+        contentPadding = PaddingValues(start = 28.dp, end = 20.dp, top = 6.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         // À la une : carrousel des derniers films ajoutés
         val featured = recentMovies.filter { it.added > 0 }.take(6)
         if (featured.isNotEmpty()) {
@@ -216,6 +217,7 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
             }
         }
     }
+}
 }
 
 /** Carte de chaîne avec son programme en cours. */
