@@ -88,11 +88,11 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
 
     Column(Modifier.fillMaxSize()) {
     // En-tête fixe : toujours visible, même quand la liste défile
-    Box(Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 10.dp)) {
+    Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     if (hour in 5..17) "Bonjour" else "Bonsoir",
-                    color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold,
+                    color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.weight(1f))
                 com.petitjord.tivihome.data.Updater.available?.let { v ->
@@ -105,19 +105,14 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                     }
                     Spacer(Modifier.width(20.dp))
                 }
-                Text(hm(now), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
+                Text(hm(now), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Light)
             }
     }
     LazyColumn(
         modifier = Modifier.fillMaxWidth().weight(1f),
-        contentPadding = PaddingValues(start = 28.dp, end = 20.dp, top = 6.dp, bottom = 40.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // À la une : carrousel des derniers films ajoutés
-        val featured = recentMovies.filter { it.added > 0 }.take(6)
-        if (featured.isNotEmpty()) {
-            item { FeaturedCarousel(featured, nav, takeFirst()) }
-        }
 
         val upcoming = reminders.filter { it.start > now - 5 * 60_000 }.sortedBy { it.start }
         if (upcoming.isNotEmpty()) {

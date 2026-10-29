@@ -116,7 +116,7 @@ class XtreamClient(val account: Account) {
         Channel(
             streamId = o.optInt("stream_id"),
             num = o.optInt("num"),
-            name = o.optString("name").trim(),
+            name = cleanName(o.optString("name")),
             icon = o.s("stream_icon"),
             categoryId = o.optString("category_id"),
             epgId = o.s("epg_channel_id"),
@@ -261,7 +261,7 @@ class XtreamClient(val account: Account) {
     // ---------- Utilitaires ----------
 
     private suspend fun categories(action: String) = array(api(action)).mapObj { o ->
-        Category(o.optString("category_id"), o.optString("category_name").trim())
+        Category(o.optString("category_id"), cleanName(o.optString("category_name")))
     }
 
     private fun b64(s: String): String = try {
@@ -282,3 +282,18 @@ private inline fun <T> JSONArray.mapObj(f: (JSONObject) -> T): List<T> {
 
 /** Le serveur refuse l'accès (souvent : appli non reconnue ou adresse incomplète). */
 class ForbiddenException(val reply: String = "") : IOException("accès refusé par le serveur (403)")
+
+private val decorations = Regex("[•●○◉◆◇■□▪▫★☆✦✧✪▲△▼▽►◄◀▶❖✿❀♦♢♠♣♥♡◘◙⬤⭐\\u2605\\uFE0F]")
+private val edgeTags = Regex("^(\\s*\\|[A-Za-z0-9]{1,4}\\|\\s*)+|(\\s*\\|[A-Za-z0-9]{1,4}\\|\\s*)+$")
+private val spaces = Regex("\\s{2,}")
+
+/**
+ * Nettoie les noms décorés par certains fournisseurs :
+ * « •●★▼ |FR| FRANCE FHD |FR| ▼★●• » devient « FRANCE FHD ».
+ */
+fun cleanName(raw: String): String {
+    var n = raw.replace(decorations, " ")
+    n = n.replace(edgeTags, " ")
+    n = n.replace(spaces, " ").trim().trim('|', '-', ':', '_', '=', '~').trim()
+    return n.ifEmpty { raw.trim() }
+}

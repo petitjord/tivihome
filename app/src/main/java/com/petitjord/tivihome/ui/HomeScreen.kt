@@ -77,7 +77,7 @@ private val sections = listOf(
 @Composable
 fun HomeScreen(nav: Nav, focusContent: Boolean) {
     val tv = LocalTvPlayer.current
-    var selected by rememberSaveable { mutableIntStateOf(0) }
+    var selected by rememberSaveable { mutableIntStateOf(LIVE) }
     var railOpen by remember { mutableStateOf(false) }
     val railFocus = rememberInitialFocus(!focusContent)
     val railWidth by animateDpAsState(if (railOpen) 220.dp else 72.dp, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 420f), label = "rail")
@@ -87,7 +87,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         if (selected != LIVE && !tv.fullscreen) tv.stop()
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 14.dp)) {
         // Contenu, décalé de la largeur du menu replié
         Box(Modifier.fillMaxSize().padding(start = 72.dp)) {
             AnimatedContent(
@@ -124,15 +124,14 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         )
         Box(
             Modifier
-                .padding(start = 8.dp, top = 10.dp, bottom = 10.dp)
                 .width(railWidth - 8.dp)
                 .fillMaxHeight()
                 .then(
                     if (railOpen && AppTheme.richEffects) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
                     else Modifier,
                 )
-                .glass(RoundedCornerShape(24.dp), strong = railOpen)
-                .background(if (railOpen) GlassDark else Color.Transparent)
+                .clip(RoundedCornerShape(18.dp))
+                .background(if (railOpen) Panel2 else Panel)
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
                 .padding(horizontal = 8.dp, vertical = 14.dp),
@@ -144,7 +143,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     .fillMaxWidth()
                     .height(itemH)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Brush.horizontalGradient(listOf(Accent.copy(alpha = 0.38f), Accent2.copy(alpha = 0.20f)))),
+                    .background(Accent.copy(alpha = 0.28f)),
             )
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                 Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {

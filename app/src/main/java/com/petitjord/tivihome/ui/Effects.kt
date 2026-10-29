@@ -45,17 +45,7 @@ fun AuroraBackground(modifier: Modifier = Modifier) {
 /** Version fixe, dessinée une seule fois : aucun coût pendant la navigation. */
 @Composable
 private fun StaticAurora(modifier: Modifier) {
-    val base = Bg
-    val a1 = Accent
-    val a2 = Accent2
-    val oled = AppTheme.oled
-    Canvas(modifier.fillMaxSize()) {
-        drawRect(base)
-        if (oled) return@Canvas
-        val w = size.width; val h = size.height
-        drawRect(Brush.radialGradient(listOf(a1.copy(alpha = 0.14f), Color.Transparent), center = Offset(w * 0.2f, h * 0.15f), radius = w * 0.55f))
-        drawRect(Brush.radialGradient(listOf(a2.copy(alpha = 0.11f), Color.Transparent), center = Offset(w * 0.85f, h * 0.9f), radius = w * 0.5f))
-    }
+    androidx.compose.foundation.layout.Box(modifier.fillMaxSize().background(Bg))
 }
 
 @Composable

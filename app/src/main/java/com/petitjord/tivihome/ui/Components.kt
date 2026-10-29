@@ -58,7 +58,7 @@ fun FocusBox(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onFocus: (() -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(12.dp),
+    shape: Shape = RoundedCornerShape(10.dp),
     background: Color = Color.Transparent,
     focusedBackground: Color = Panel2,
     scaleOnFocus: Float = 1f,
@@ -96,11 +96,7 @@ fun FocusBox(
                 } else Modifier,
             )
             .background(bg, shape)
-            .border(
-                2.dp,
-                Brush.linearGradient(listOf(Accent.copy(alpha = glowAlpha), Accent2.copy(alpha = glowAlpha))),
-                shape,
-            )
+            .border(2.dp, Accent.copy(alpha = glowAlpha), shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused && !focused) focus?.invoke()
