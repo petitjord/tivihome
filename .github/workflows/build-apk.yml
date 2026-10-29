@@ -1,0 +1,45 @@
+name: Compiler l'APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Compiler
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Renommer l'APK
+        run: cp app/build/outputs/apk/release/app-release.apk ZapTV.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZapTV
+          path: ZapTV.apk
+
+      - name: Publier la version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: ZapTV 1.0.${{ github.run_number }}
+          body: |
+            APK à installer sur Android TV : télécharge **ZapTV.apk** ci-dessous.
+          files: ZapTV.apk
+          make_latest: true
