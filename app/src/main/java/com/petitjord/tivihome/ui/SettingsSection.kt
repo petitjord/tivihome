@@ -125,12 +125,12 @@ private fun XmltvSettings() {
     )
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Choice("Enregistrer et charger", false) {
-            AppRepo.setXmltvUrl(url)
+            AppRepo.updateXmltvUrl(url)
             scope.launch { AppRepo.loadXmltv(force = true) }
         }
         Choice("Retirer", false) {
             url = ""
-            AppRepo.setXmltvUrl("")
+            AppRepo.updateXmltvUrl("")
         }
     }
     Text(AppRepo.xmltvStatus, color = Color.White, fontSize = 14.sp)

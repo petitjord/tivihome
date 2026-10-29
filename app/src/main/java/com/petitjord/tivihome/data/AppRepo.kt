@@ -158,7 +158,7 @@ object AppRepo {
 
     // ---------- Guide XMLTV ----------
 
-    fun setXmltvUrl(url: String) {
+    fun updateXmltvUrl(url: String) {
         xmltvUrl = url.trim()
         prefs.edit().putString("xmltvUrl", xmltvUrl).apply()
         if (xmltvUrl.isEmpty()) {
