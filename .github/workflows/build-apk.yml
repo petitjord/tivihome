@@ -28,7 +28,7 @@ jobs:
           set -o pipefail
           gradle :app:assembleRelease --no-daemon 2>&1 | tee build.log || {
             # Remonte les erreurs en annotations lisibles sur la page du build
-            grep -E "^e: |What went wrong|> |error:|Could not" build.log | head -40 | while IFS= read -r l; do
+            grep -vE "^> Task" build.log | grep -E "^e: |error:|Could not|Unresolved|wrong:|^> [A-Z]" -A1 | grep -vE "^--$" | head -9 | while IFS= read -r l; do
               echo "::error::${l//%/%25}"
             done
             exit 1
