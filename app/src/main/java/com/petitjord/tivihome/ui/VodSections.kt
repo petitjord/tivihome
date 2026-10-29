@@ -71,6 +71,8 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
             unit = "films",
             titleOf = { it.name },
             imageOf = { it.poster },
+            metaOf = { m -> m.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
+            descriptionOf = { m -> AppRepo.vodInfo(m).plot },
         ) { m, requester, onFocus ->
             Poster(
                 title = m.name, image = m.poster, favorite = m.favKey in favs,
@@ -100,6 +102,8 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
             unit = "séries",
             titleOf = { it.name },
             imageOf = { it.cover },
+            metaOf = { se -> se.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
+            descriptionOf = { se -> se.plot ?: AppRepo.seriesInfo(se.seriesId).plot },
         ) { s, requester, onFocus ->
             Poster(
                 title = s.name, image = s.cover, favorite = s.favKey in favs,
@@ -124,6 +128,8 @@ private fun <T> CatalogGrid(
     unit: String,
     titleOf: (T) -> String,
     imageOf: (T) -> String?,
+    metaOf: (T) -> String?,
+    descriptionOf: suspend (T) -> String?,
     cell: @Composable (T, androidx.compose.ui.focus.FocusRequester?, () -> Unit) -> Unit,
 ) {
     val resumeKeys = AppRepo.resume
@@ -135,9 +141,9 @@ private fun <T> CatalogGrid(
     var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
     var focusedIdx by rememberSaveable { mutableIntStateOf(0) }
     val favs = AppRepo.favorites
-    val list = remember(catId, items, favs, resumeKeys, AppRepo.hiddenGroups) {
+    val list = remember(catId, items, favs, resumeKeys, AppRepo.hiddenGroups, AppRepo.lockedGroups, AppRepo.unlocked, AppRepo.profileId) {
         when (catId) {
-            ALL -> items.filter { categoryOf(it) !in AppRepo.hiddenGroups }
+            ALL -> items.filter { visibleCat(categoryOf(it)) }
             FAV -> items.filter(isFav)
             RESUME -> items.filter(inProgress)
             else -> items.filter { categoryOf(it) == catId }
@@ -155,7 +161,11 @@ private fun <T> CatalogGrid(
         Column(Modifier.weight(1f).fillMaxHeight()) {
             // Bandeau : affiche floutée et titre de l'élément survolé
             val hero = list.getOrNull(focusedIdx.coerceAtMost(list.lastIndex).coerceAtLeast(0))
-            Box(Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(bottomStart = 16.dp))) {
+            // Résumé chargé après un court arrêt sur l'affiche (pas pendant le défilement)
+            val desc = rememberLoad(hero?.let(titleOf)) {
+                if (hero == null) null else { kotlinx.coroutines.delay(350); runCatching { descriptionOf(hero) }.getOrNull() }
+            }
+            Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(bottomStart = 16.dp))) {
                 val img = hero?.let(imageOf)
                 if (img != null) {
                     AsyncImage(
@@ -173,20 +183,36 @@ private fun <T> CatalogGrid(
                         hero?.let(titleOf) ?: "", color = Color.White, fontSize = 26.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
+                    hero?.let(metaOf)?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, color = Gold, fontSize = 13.sp, maxLines = 1)
+                    }
+                    val plot = (desc.state as? Load.Ok<String?>)?.data
+                    Text(
+                        when {
+                            !plot.isNullOrBlank() -> plot
+                            desc.state is Load.Loading && hero != null -> "…"
+                            else -> ""
+                        },
+                        color = Color(0xFFC9D1DC), fontSize = 14.sp, lineHeight = 19.sp,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(0.85f).padding(top = 4.dp),
+                    )
                 }
             }
             Spacer(Modifier.height(6.dp))
             Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp)) {
-            if (list.isEmpty()) {
+            if (AppRepo.groupNeedsPin(catId)) {
+                LockedGroupView()
+            } else if (list.isEmpty()) {
                 EmptyText(if (catId == FAV) "Aucun favori.\nMaintiens OK sur une affiche pour l'ajouter." else "Rien dans cette catégorie.")
             } else {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(120.dp),
+                    columns = GridCells.Adaptive(96.dp),
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                     contentPadding = PaddingValues(6.dp, 6.dp, 6.dp, 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     itemsIndexed(list) { i, item ->
                         cell(

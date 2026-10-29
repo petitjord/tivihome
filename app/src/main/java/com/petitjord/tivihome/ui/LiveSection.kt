@@ -68,9 +68,9 @@ private fun LiveContent(cats: List<Category>, channels: List<Channel>, nav: Nav,
     val groups = remember(cats) {
         listOf(Category(FAV, "★ Favoris"), Category(ALL, "Toutes les chaînes")) + cats
     }
-    val list = remember(catId, channels, favs, AppRepo.hiddenGroups) {
+    val list = remember(catId, channels, favs, AppRepo.hiddenGroups, AppRepo.lockedGroups, AppRepo.unlocked, AppRepo.profileId) {
         when (catId) {
-            ALL -> channels.filter { it.categoryId !in AppRepo.hiddenGroups }
+            ALL -> channels.filter { visibleCat(it.categoryId) }
             FAV -> channels.filter { it.favKey in favs }
             else -> channels.filter { it.categoryId == catId }
         }
@@ -108,8 +108,13 @@ private fun LiveContent(cats: List<Category>, channels: List<Channel>, nav: Nav,
         CategoryColumn(groups, catId, onSelect = { catId = it })
 
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, top = 16.dp, end = 12.dp)) {
-            SectionHeader(groups.firstOrNull { it.id == catId }?.name ?: "", "${list.size}")
-            if (list.isEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { SectionHeader(groups.firstOrNull { it.id == catId }?.name ?: "", "${list.size}") }
+                ActionButton("▦ Multi-écran") { nav.openMulti(list.ifEmpty { channels }) }
+            }
+            if (AppRepo.groupNeedsPin(catId)) {
+                LockedGroupView()
+            } else if (list.isEmpty()) {
                 EmptyText(if (catId == FAV) "Aucun favori.\nMaintiens OK sur une chaîne pour l'ajouter." else "Aucune chaîne dans ce groupe.")
             } else {
                 LazyColumn(

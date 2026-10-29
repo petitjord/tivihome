@@ -65,9 +65,9 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
     val groups = remember(cats) { listOf(Category(FAV, "★ Favoris"), Category(ALL, "Toutes")) + cats }
     val favs = AppRepo.favorites
     var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
-    val list = remember(catId, channels, favs, AppRepo.hiddenGroups) {
+    val list = remember(catId, channels, favs, AppRepo.hiddenGroups, AppRepo.lockedGroups, AppRepo.unlocked, AppRepo.profileId) {
         when (catId) {
-            ALL -> channels.filter { it.categoryId !in AppRepo.hiddenGroups }
+            ALL -> channels.filter { visibleCat(it.categoryId) }
             FAV -> channels.filter { it.favKey in favs }
             else -> channels.filter { it.categoryId == catId }
         }
@@ -89,7 +89,7 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(groups.filter { it.id !in AppRepo.hiddenGroups }) { g ->
+            items(groups.filter { !AppRepo.groupInvisible(it.id) }) { g ->
                 val sel = g.id == catId
                 FocusBox(
                     onClick = { catId = g.id },
@@ -107,7 +107,11 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
 
         TimeRuler(windowStart, hScroll)
 
-        if (list.isEmpty()) {
+        if (AppRepo.groupNeedsPin(catId)) {
+
+            LockedGroupView()
+
+        } else if (list.isEmpty()) {
             EmptyText("Aucune chaîne dans ce groupe.")
         } else {
             LazyColumn(

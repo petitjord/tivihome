@@ -48,6 +48,7 @@ sealed interface Screen {
     data object LiveFull : Screen
     data class Vod(val queue: List<VodItem>, val index: Int) : Screen
     data class MovieDetail(val movie: com.petitjord.tivihome.data.Movie) : Screen
+    data class Multi(val candidates: List<Channel>) : Screen
     data class SeriesDetail(val series: Series) : Screen
 }
 
@@ -61,6 +62,10 @@ class Nav(
     val back: () -> Unit,
     val logout: () -> Unit,
     val switchAccount: (com.petitjord.tivihome.data.Account) -> Unit,
+    /** Recharge toute la navigation (changement de profil). */
+    val reload: () -> Unit,
+    /** Ouvre la mosaïque multi-écran avec ces chaînes au choix. */
+    val openMulti: (List<Channel>) -> Unit,
 )
 
 @Composable
@@ -71,9 +76,15 @@ fun App() {
         if (!loggedIn) {
             LoginScreen(onLoggedIn = { loggedIn = true })
         } else {
-            // Changer de compte recrée toute la navigation
-            androidx.compose.runtime.key(session) {
-                MainNavigation(onLogout = { loggedIn = false }, onReload = { session++ })
+            // Plusieurs profils : on demande qui regarde au lancement
+            var picked by remember { mutableStateOf(AppRepo.profiles.size <= 1) }
+            if (!picked) {
+                ProfilePicker(onPicked = { picked = true })
+            } else {
+                // Changer de compte ou de profil recrée toute la navigation
+                androidx.compose.runtime.key(session) {
+                    MainNavigation(onLogout = { loggedIn = false }, onReload = { session++ })
+                }
             }
         }
     }
@@ -111,7 +122,7 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
             back = {
                 if (stack.size > 1) {
                     val top = stack.removeAt(stack.lastIndex)
-                    if (top is Screen.LiveFull || top is Screen.Vod) tv.fullscreen = false
+                    if (top is Screen.LiveFull || top is Screen.Vod || top is Screen.Multi) tv.fullscreen = false
                     returning = true
                 }
             },
@@ -124,6 +135,15 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
                 tv.stop()
                 AppRepo.switchAccount(acc)
                 onReload()
+            },
+            reload = {
+                tv.stop()
+                onReload()
+            },
+            openMulti = { list ->
+                tv.stop()
+                tv.fullscreen = true
+                stack.add(Screen.Multi(list))
             },
         )
         self
@@ -141,6 +161,8 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
     LaunchedEffect(Unit) {
         // Guide XMLTV externe : chargé en arrière-plan au démarrage
         launch { AppRepo.loadXmltv() }
+        // Nouvelle version de Tivihome ?
+        launch { com.petitjord.tivihome.data.Updater.check(ctx) }
         // Démarrage direct sur la dernière chaîne
         if (AppRepo.startOnLastChannel && AppRepo.lastChannelId >= 0) {
             runCatching {
@@ -164,7 +186,7 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
                 notified += r.streamId to r.start
                 reminderShown = r
             }
-            val watching = stack.last() is Screen.LiveFull || stack.last() is Screen.Vod
+            val watching = stack.last() is Screen.LiveFull || stack.last() is Screen.Vod || stack.last() is Screen.Multi
             idle = !watching && now - lastInput > 5 * 60_000L
             delay(10_000)
         }
@@ -194,6 +216,7 @@ private fun MainNavigation(onLogout: () -> Unit, onReload: () -> Unit) {
                     is Screen.MovieDetail -> holder.SaveableStateProvider("movie-${top.movie.streamId}") {
                         MovieDetailScreen(top.movie, nav)
                     }
+                    is Screen.Multi -> MultiScreen(top.candidates, nav)
                 }
             }
 

@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -67,7 +69,11 @@ fun CategoryColumn(
     val state = rememberLazyListState()
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val hidden = AppRepo.hiddenGroups
-    val visible = remember(groups, hidden) { groups.filter { it.id !in hidden } }
+    val locked = AppRepo.lockedGroups
+    val kid = AppRepo.profile.kid
+    val visible = remember(groups, hidden, locked, kid) { groups.filter { !AppRepo.groupInvisible(it.id) } }
+    var menuFor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Category?>(null) }
+    menuFor?.let { g -> GroupMenu(g, onDismiss = { menuFor = null }, onChanged = { if (AppRepo.groupInvisible(g.id)) onSelect(ALL) }) }
     LazyColumn(
         state = state,
         modifier = modifier.width(200.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
@@ -79,19 +85,13 @@ fun CategoryColumn(
             FocusBox(
                 onClick = { onSelect(g.id) },
                 onFocus = { onSelect(g.id) },
-                onLongClick = if (g.id.startsWith("__")) null else {
-                    {
-                        AppRepo.toggleHiddenGroup(g.id)
-                        Toast.makeText(ctx, "« ${g.name} » masqué. Réaffichage dans Paramètres.", Toast.LENGTH_LONG).show()
-                        onSelect(ALL)
-                    }
-                },
+                onLongClick = if (g.id.startsWith("__")) null else { { menuFor = g } },
                 background = if (sel) AccentDim else Color.Transparent,
                 modifier = Modifier.fillMaxWidth().height(42.dp),
             ) { focused ->
                 Box(Modifier.fillMaxSize().padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
                     Text(
-                        g.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp,
+                        (if (g.id in locked) "🔒 " else "") + g.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp,
                         color = if (sel || focused) Color.White else TextDim,
                         fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
                     )
@@ -152,7 +152,7 @@ fun Poster(
                     .padding(start = 8.dp, end = 8.dp, top = 24.dp, bottom = 8.dp),
             ) {
                 if (image != null) {
-                    Text(title, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(title, color = Color.White, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

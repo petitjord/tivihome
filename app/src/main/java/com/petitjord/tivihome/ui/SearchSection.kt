@@ -81,9 +81,9 @@ private fun SearchContent(d: SearchData, nav: Nav) {
         val n = fold(name)
         return words.all { it in n }
     }
-    val channels = remember(words, d) { d.channels.filter { match(it.name) }.take(60) }
-    val movies = remember(words, d) { d.movies.filter { match(it.name) }.take(60) }
-    val series = remember(words, d) { d.series.filter { match(it.name) }.take(60) }
+    val channels = remember(words, d) { d.channels.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
+    val movies = remember(words, d) { d.movies.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
+    val series = remember(words, d) { d.series.filter { visibleCat(it.categoryId) && match(it.name) }.take(60) }
     // Recherche dans le guide (si un guide XMLTV est chargé)
     val onAir = remember(words, d) {
         val g = AppRepo.xmltvGuide

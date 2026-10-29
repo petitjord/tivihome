@@ -60,6 +60,7 @@ import com.petitjord.tivihome.data.AppRepo
 import com.petitjord.tivihome.data.Channel
 import com.petitjord.tivihome.data.VodItem
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * TV en direct en plein écran.
@@ -76,6 +77,7 @@ fun LiveFullScreen(nav: Nav) {
     var digits by remember { mutableStateOf("") }
     var okLong by remember { mutableStateOf(false) }
     var okDown by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val allChannels = rememberLoad("all-channels") { AppRepo.liveStreams() }
     var activity by remember { mutableIntStateOf(0) } // relance les minuteurs à chaque touche
     val rootFocus = remember { FocusRequester() }
@@ -148,6 +150,11 @@ fun LiveFullScreen(nav: Nav) {
                     return@onKeyEvent true
                 }
                 when (ev.key) {
+                    Key.MediaPlayPause, Key.MediaPause, Key.MediaPlay, Key.Spacebar -> {
+                        if (tv.pausedAt != null) scope.launch { tv.resumeLive() } else tv.pauseLive()
+                        true
+                    }
+                    Key.MediaFastForward, Key.MediaStop -> { if (tv.delayMs > 0 || tv.pausedAt != null) tv.goLive(); true }
                     Key.DirectionUp, Key.ChannelUp, Key.PageUp -> { tv.zap(-1); true }
                     Key.DirectionDown, Key.ChannelDown, Key.PageDown -> { tv.zap(1); true }
                     Key.DirectionLeft, Key.Menu -> { listOpen = true; infoVisible = false; true }
@@ -175,6 +182,28 @@ fun LiveFullScreen(nav: Nav) {
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             if (ch != null) LiveInfoBar(ch, tv.channels.indexOf(ch), tv.channels.size)
+        }
+
+        // Pause / différé
+        tv.pausedAt?.let { since ->
+            var tick by remember { mutableIntStateOf(0) }
+            LaunchedEffect(since) { while (true) { delay(1_000); tick++ } }
+            val secs = ((System.currentTimeMillis() - since) / 1000).toInt() + tick * 0
+            Box(Modifier.align(Alignment.Center).background(Color(0xCC0B0E13), RoundedCornerShape(16.dp)).padding(horizontal = 28.dp, vertical = 18.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("⏸  En pause", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                    Text("depuis ${secs / 60} min ${"%02d".format(secs % 60)}", color = TextDim, fontSize = 14.sp)
+                    Text(
+                        if ((tv.channel?.archiveDays ?: 0) > 0) "▶ reprend là où tu t'es arrêté" else "▶ reprend (cette chaîne n'a pas de replay)",
+                        color = TextDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+        if (tv.delayMs > 0 && tv.pausedAt == null) {
+            Box(Modifier.align(Alignment.TopStart).padding(28.dp).background(Color(0xDD0B0E13), RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text("Différé −${tv.delayMs / 60_000} min  ·  ⏩ ou ■ : retour au direct", color = Gold, fontSize = 14.sp)
+            }
         }
 
         // Numéro en cours de saisie

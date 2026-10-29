@@ -42,6 +42,9 @@ fun SettingsSection(nav: Nav) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Title("Mise à jour")
+        UpdateSettings()
+
         Title("Compte")
         Line("Serveur", client?.base ?: "—")
         Line("Utilisateur", client?.account?.username ?: "—")
@@ -72,6 +75,12 @@ fun SettingsSection(nav: Nav) {
             }
         }
         Choice("+ Ajouter un compte", false) { nav.logout() }
+
+        Title("Profils")
+        ProfileSettings(nav)
+
+        Title("Contrôle parental")
+        PinSettings()
 
         Title("Apparence")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -189,4 +198,108 @@ private fun XmltvSettings() {
         }
     }
     Text(AppRepo.xmltvStatus, color = Color.White, fontSize = 14.sp)
+}
+
+@Composable
+private fun UpdateSettings() {
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (com.petitjord.tivihome.data.Updater.status.isEmpty()) com.petitjord.tivihome.data.Updater.check(ctx)
+    }
+    Line("Version installée", com.petitjord.tivihome.data.Updater.installedName(ctx))
+    Text(com.petitjord.tivihome.data.Updater.status.ifEmpty { "Vérification…" }, color = Color.White, fontSize = 14.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (com.petitjord.tivihome.data.Updater.available != null) {
+            Choice(if (com.petitjord.tivihome.data.Updater.busy) "Téléchargement…" else "Installer la mise à jour", true) {
+                if (!com.petitjord.tivihome.data.Updater.busy) scope.launch { com.petitjord.tivihome.data.Updater.downloadAndInstall(ctx) }
+            }
+        }
+        Choice("Rechercher une mise à jour", false) {
+            scope.launch { com.petitjord.tivihome.data.Updater.check(ctx) }
+        }
+    }
+}
+
+@Composable
+private fun ProfileSettings(nav: Nav) {
+    var name by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    var askPinFor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.petitjord.tivihome.data.Profile?>(null) }
+    Text("Chaque profil a ses favoris, sa reprise de lecture, ses rappels et ses groupes masqués.", color = TextDim, fontSize = 13.sp)
+    AppRepo.profiles.forEach { p ->
+        val active = p.id == AppRepo.profileId
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                (if (active) "● " else "○ ") + p.name + if (p.kid) "  (enfant)" else "",
+                color = if (active) Accent else Color.White, fontSize = 14.sp, modifier = Modifier.width(260.dp),
+            )
+            if (!active) {
+                Choice("Utiliser", false) {
+                    val needsPin = !p.kid && AppRepo.profile.kid && AppRepo.parentalPin != null
+                    if (needsPin) askPinFor = p else { AppRepo.switchProfile(p.id); nav.reload() }
+                }
+                if (p.id != 0 && !AppRepo.profile.kid) Choice("Supprimer", false) { AppRepo.removeProfile(p) }
+            }
+        }
+    }
+    if (!AppRepo.profile.kid) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.OutlinedTextField(
+                value = name, onValueChange = { name = it.take(20) }, singleLine = true,
+                placeholder = { Text("Nom du profil") }, modifier = Modifier.width(260.dp),
+            )
+            Choice("+ Adulte", false) { AppRepo.addProfile(name, kid = false); name = "" }
+            Choice("+ Enfant", false) { AppRepo.addProfile(name, kid = true); name = "" }
+        }
+    }
+    askPinFor?.let { p ->
+        PinDialog("Code parental", onDismiss = { askPinFor = null }) {
+            askPinFor = null
+            AppRepo.switchProfile(p.id)
+            nav.reload()
+        }
+    }
+}
+
+@Composable
+private fun PinSettings() {
+    var pin by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    var askOld by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val ctx = LocalContext.current
+    Text(
+        if (AppRepo.parentalPin == null) "Aucun code. Choisis un code de 4 chiffres ou plus, puis verrouille des groupes avec OK maintenu."
+        else "Code actif · ${AppRepo.lockedGroups.size} groupe(s) verrouillé(s).",
+        color = if (AppRepo.parentalPin == null) TextDim else Color.White, fontSize = 13.sp,
+    )
+    if (AppRepo.profile.kid) return
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.OutlinedTextField(
+            value = pin, onValueChange = { v -> pin = v.filter { it.isDigit() }.take(8) }, singleLine = true,
+            placeholder = { Text("Nouveau code") },
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+            modifier = Modifier.width(200.dp),
+        )
+        Choice(if (AppRepo.parentalPin == null) "Définir le code" else "Changer le code", false) {
+            if (pin.length < 4) {
+                Toast.makeText(ctx, "4 chiffres minimum", Toast.LENGTH_SHORT).show()
+            } else if (AppRepo.parentalPin != null && !AppRepo.unlocked) {
+                askOld = true
+            } else {
+                AppRepo.setPin(pin); pin = ""
+                Toast.makeText(ctx, "Code enregistré", Toast.LENGTH_SHORT).show()
+            }
+        }
+        if (AppRepo.parentalPin != null) {
+            Choice("Supprimer le code", false) {
+                if (!AppRepo.unlocked) askOld = true else AppRepo.setPin(null)
+            }
+        }
+    }
+    if (askOld) {
+        PinDialog("Code actuel", onDismiss = { askOld = false }) {
+            askOld = false
+            Toast.makeText(ctx, "Code vérifié, recommence l'opération", Toast.LENGTH_SHORT).show()
+        }
+    }
 }

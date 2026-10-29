@@ -43,6 +43,7 @@ import com.petitjord.tivihome.data.Programme
 import com.petitjord.tivihome.data.Series
 import com.petitjord.tivihome.data.VodItem
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 private data class HomeData(val channels: List<Channel>, val movies: List<Movie>, val series: List<Series>)
@@ -94,6 +95,16 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                     color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.weight(1f))
+                com.petitjord.tivihome.data.Updater.available?.let { v ->
+                    val scope = androidx.compose.runtime.rememberCoroutineScope()
+                    ActionButton(
+                        if (com.petitjord.tivihome.data.Updater.busy) com.petitjord.tivihome.data.Updater.status else "⬇  Mettre à jour (1.0.$v)",
+                        primary = true,
+                    ) {
+                        if (!com.petitjord.tivihome.data.Updater.busy) scope.launch { com.petitjord.tivihome.data.Updater.downloadAndInstall(ctx) }
+                    }
+                    Spacer(Modifier.width(20.dp))
+                }
                 Text(hm(now), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
             }
         }

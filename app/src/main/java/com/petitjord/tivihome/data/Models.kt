@@ -116,3 +116,6 @@ data class ResumeEntry(
 ) {
     val progress: Float get() = if (durationMs <= 0) 0f else (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 }
+
+/** Profil d'utilisateur ; un profil enfant ne voit jamais les groupes verrouillés. */
+data class Profile(val id: Int, val name: String, val kid: Boolean)

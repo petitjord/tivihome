@@ -51,6 +51,13 @@ class TvPlayer(ctx: Context) {
         private set
     var error by mutableStateOf<String?>(null)
         private set
+    /** Direct en pause depuis cet instant (null = pas en pause). */
+    var pausedAt by mutableStateOf<Long?>(null)
+        private set
+    /** Retard sur le direct en ms (0 = en direct). */
+    var delayMs by mutableStateOf(0L)
+        private set
+
     /** Film / épisode arrivé à la fin. */
     var ended by mutableStateOf(false)
         private set
@@ -91,10 +98,12 @@ class TvPlayer(ctx: Context) {
         })
     }
 
-    fun playChannel(ch: Channel, list: List<Channel>) {
+    fun playChannel(ch: Channel, list: List<Channel>, force: Boolean = false) {
         channels = list
-        if (ch == channel && error == null && exo.playbackState != Player.STATE_IDLE) return
+        if (!force && ch == channel && error == null && exo.playbackState != Player.STATE_IDLE) return
         channel = ch
+        pausedAt = null
+        delayMs = 0L
         format = AppRepo.liveFormat
         fallbackTried = false
         retries = 0
@@ -102,9 +111,49 @@ class TvPlayer(ctx: Context) {
         start(AppRepo.liveUrl(ch, format))
     }
 
+    // ---------- Pause du direct ----------
+
+    fun pauseLive() {
+        if (channel == null || pausedAt != null) return
+        exo.pause()
+        pausedAt = System.currentTimeMillis()
+    }
+
+    /**
+     * Reprise après une pause : courte pause = on reprend le tampon ;
+     * longue pause sur une chaîne avec replay = lecture en différé depuis l'instant de la pause.
+     */
+    suspend fun resumeLive() {
+        val ch = channel ?: return
+        val since = pausedAt ?: return
+        pausedAt = null
+        val gap = System.currentTimeMillis() - since
+        if (gap < 20_000 || ch.archiveDays <= 0) {
+            exo.play()
+            return
+        }
+        val from = since - delayMs
+        val url = try {
+            AppRepo.timeshiftUrlFrom(ch, from, minutes = 240)
+        } catch (e: Exception) {
+            null
+        }
+        if (url == null) { exo.play(); return }
+        delayMs = System.currentTimeMillis() - from
+        fallbackTried = true
+        start(url)
+    }
+
+    /** Revenir au direct. */
+    fun goLive() {
+        val ch = channel ?: return
+        playChannel(ch, channels, force = true)
+    }
+
     /** Reconnexion automatique après une coupure (3 essais espacés). */
     private fun reconnect() {
         val ch = channel ?: return
+        if (delayMs > 0) { error = "Différé interrompu"; return }
         retries++
         buffering = true
         handler.postDelayed({

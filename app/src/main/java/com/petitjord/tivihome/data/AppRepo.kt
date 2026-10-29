@@ -67,18 +67,40 @@ object AppRepo {
     private val epg = ConcurrentHashMap<Int, Pair<Long, Pair<Int, List<Programme>>>>()
     private val archive = ConcurrentHashMap<Int, Pair<Long, List<Programme>>>()
 
+    // ---------- Profils ----------
+    var profiles by mutableStateOf<List<Profile>>(listOf(Profile(0, "Principal", false)))
+        private set
+    var profileId by mutableStateOf(0)
+        private set
+    val profile: Profile get() = profiles.firstOrNull { it.id == profileId } ?: profiles.first()
+
+    /** Clé de préférence propre au profil actif (le profil 0 garde les clés d'origine). */
+    private fun k(name: String) = if (profileId == 0) name else "p${profileId}_$name"
+
+    // ---------- Contrôle parental ----------
+    var parentalPin by mutableStateOf<String?>(null)
+        private set
+    var lockedGroups by mutableStateOf<Set<String>>(emptySet())
+        private set
+    /** Déverrouillé par le code jusqu'à la fermeture de l'appli. */
+    var unlocked by mutableStateOf(false)
+
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
         prefs = ctx.getSharedPreferences("tivihome", Context.MODE_PRIVATE)
+        profiles = readProfiles()
+        profileId = prefs.getInt("profile", 0).takeIf { id -> profiles.any { it.id == id } } ?: 0
+        parentalPin = prefs.getString("pin", null)
+        lockedGroups = prefs.getStringSet("lockedGroups", emptySet())!!.toSet()
         cacheDir = ctx.cacheDir
-        favorites = prefs.getStringSet("favorites", emptySet())!!.toSet()
+        favorites = prefs.getStringSet(k("favorites"), emptySet())!!.toSet()
         liveFormat = prefs.getString("liveFormat", "ts") ?: "ts"
         xmltvUrl = prefs.getString("xmltvUrl", "") ?: ""
         resume = readResume()
         prefs.getString("ua", null)?.let { Net.userAgent = it }
         startOnLastChannel = prefs.getBoolean("startLast", false)
         subtitleSize = prefs.getInt("subSize", 1)
-        hiddenGroups = prefs.getStringSet("hiddenGroups", emptySet())!!.toSet()
+        hiddenGroups = prefs.getStringSet(k("hiddenGroups"), emptySet())!!.toSet()
         reminders = readReminders()
         accounts = readAccounts()
         com.petitjord.tivihome.ui.AppTheme.accentIndex = prefs.getInt("accent", 0)
@@ -169,6 +191,75 @@ object AppRepo {
         prefs.edit().putString("accounts", arr.toString()).apply()
     }
 
+    // ---------- Profils ----------
+
+    private fun readProfiles(): List<Profile> = try {
+        val arr = JSONArray(prefs.getString("profiles", "[]"))
+        val list = (0 until arr.length()).mapNotNull { i ->
+            arr.optJSONObject(i)?.let { Profile(it.getInt("id"), it.getString("name"), it.optBoolean("kid")) }
+        }
+        if (list.none { it.id == 0 }) listOf(Profile(0, "Principal", false)) + list else list
+    } catch (e: Exception) {
+        listOf(Profile(0, "Principal", false))
+    }
+
+    private fun writeProfiles() {
+        val arr = JSONArray()
+        profiles.forEach { arr.put(JSONObject().put("id", it.id).put("name", it.name).put("kid", it.kid)) }
+        prefs.edit().putString("profiles", arr.toString()).apply()
+    }
+
+    fun addProfile(name: String, kid: Boolean) {
+        val id = (profiles.maxOfOrNull { it.id } ?: 0) + 1
+        profiles = profiles + Profile(id, name.ifBlank { "Profil $id" }, kid)
+        writeProfiles()
+    }
+
+    fun removeProfile(p: Profile) {
+        if (p.id == 0) return
+        profiles = profiles.filterNot { it.id == p.id }
+        writeProfiles()
+        if (profileId == p.id) switchProfile(0)
+    }
+
+    /** Change de profil : favoris, reprise, rappels et groupes masqués suivent le profil. */
+    fun switchProfile(id: Int) {
+        profileId = id
+        prefs.edit().putInt("profile", id).apply()
+        favorites = prefs.getStringSet(k("favorites"), emptySet())!!.toSet()
+        hiddenGroups = prefs.getStringSet(k("hiddenGroups"), emptySet())!!.toSet()
+        resume = readResume()
+        reminders = readReminders()
+        unlocked = false
+    }
+
+    // ---------- Contrôle parental ----------
+
+    fun setPin(pin: String?) {
+        parentalPin = pin?.takeIf { it.length >= 4 }
+        prefs.edit().putString("pin", parentalPin).apply()
+        if (parentalPin == null) unlocked = false
+    }
+
+    fun checkPin(pin: String): Boolean {
+        val ok = parentalPin == null || pin == parentalPin
+        if (ok) unlocked = true
+        return ok
+    }
+
+    fun toggleLockedGroup(id: String): Boolean {
+        val lock = id !in lockedGroups
+        lockedGroups = if (lock) lockedGroups + id else lockedGroups - id
+        prefs.edit().putStringSet("lockedGroups", lockedGroups).apply()
+        return lock
+    }
+
+    /** Groupe à cacher complètement (profil enfant) ? */
+    fun groupInvisible(id: String) = id in hiddenGroups || (profile.kid && id in lockedGroups)
+
+    /** Groupe nécessitant le code avant d'afficher son contenu ? */
+    fun groupNeedsPin(id: String) = id in lockedGroups && parentalPin != null && !unlocked
+
     // ---------- Dernier essai de connexion (prérempli) ----------
     val lastTriedServer: String get() = prefs.getString("tryServer", "") ?: ""
     val lastTriedUser: String get() = prefs.getString("tryUser", "") ?: ""
@@ -195,13 +286,13 @@ object AppRepo {
     fun toggleHiddenGroup(id: String): Boolean {
         val hide = id !in hiddenGroups
         hiddenGroups = if (hide) hiddenGroups + id else hiddenGroups - id
-        prefs.edit().putStringSet("hiddenGroups", hiddenGroups).apply()
+        prefs.edit().putStringSet(k("hiddenGroups"), hiddenGroups).apply()
         return hide
     }
 
     fun showAllGroups() {
         hiddenGroups = emptySet()
-        prefs.edit().putStringSet("hiddenGroups", hiddenGroups).apply()
+        prefs.edit().putStringSet(k("hiddenGroups"), hiddenGroups).apply()
     }
 
     // ---------- Rappels ----------
@@ -222,7 +313,7 @@ object AppRepo {
     }
 
     private fun readReminders(): List<Reminder> = try {
-        val arr = JSONArray(prefs.getString("reminders", "[]"))
+        val arr = JSONArray(prefs.getString(k("reminders"), "[]"))
         val now = System.currentTimeMillis()
         (0 until arr.length()).mapNotNull { i ->
             arr.optJSONObject(i)?.let { Reminder(it.getInt("id"), it.optString("ch"), it.optString("t"), it.getLong("s")) }
@@ -234,7 +325,7 @@ object AppRepo {
     private fun writeReminders() {
         val arr = JSONArray()
         reminders.forEach { arr.put(JSONObject().put("id", it.streamId).put("ch", it.channelName).put("t", it.title).put("s", it.start)) }
-        prefs.edit().putString("reminders", arr.toString()).apply()
+        prefs.edit().putString(k("reminders"), arr.toString()).apply()
     }
 
     fun logout() {
@@ -260,7 +351,7 @@ object AppRepo {
     fun toggleFavorite(key: String): Boolean {
         val now = key !in favorites
         favorites = if (now) favorites + key else favorites - key
-        prefs.edit().putStringSet("favorites", favorites).apply()
+        prefs.edit().putStringSet(k("favorites"), favorites).apply()
         return now
     }
 
@@ -309,6 +400,12 @@ object AppRepo {
             .map { it.copy(hasArchive = true) }
         archive[ch.streamId] = now to list
         return list
+    }
+
+    /** URL de lecture en différé à partir d'un instant donné. */
+    suspend fun timeshiftUrlFrom(ch: Channel, startMs: Long, minutes: Int): String {
+        if (serverTz == null) runCatching { accountInfo() }
+        return c().timeshiftUrl(ch.streamId, startMs, minutes, serverTz)
     }
 
     suspend fun replayUrl(ch: Channel, p: Programme): String {
@@ -365,7 +462,7 @@ object AppRepo {
     }
 
     private fun readResume(): List<ResumeEntry> = try {
-        val arr = JSONArray(prefs.getString("resume", "[]"))
+        val arr = JSONArray(prefs.getString(k("resume"), "[]"))
         (0 until arr.length()).mapNotNull { i ->
             arr.optJSONObject(i)?.let { o ->
                 ResumeEntry(
@@ -393,7 +490,7 @@ object AppRepo {
                     .put("dur", it.durationMs).put("at", it.updatedAt),
             )
         }
-        prefs.edit().putString("resume", arr.toString()).apply()
+        prefs.edit().putString(k("resume"), arr.toString()).apply()
     }
 
     fun liveUrl(ch: Channel, format: String = liveFormat) = c().liveUrl(ch.streamId, format)
