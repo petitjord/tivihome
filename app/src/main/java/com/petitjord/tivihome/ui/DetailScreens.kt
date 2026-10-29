@@ -132,9 +132,16 @@ private fun Detail(label: String, value: String) {
 }
 
 @Composable
-fun ActionButton(label: String, primary: Boolean = false, requester: FocusRequester? = null, onClick: () -> Unit) {
+fun ActionButton(
+    label: String,
+    primary: Boolean = false,
+    requester: FocusRequester? = null,
+    onFocus: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     FocusBox(
         onClick = onClick,
+        onFocus = onFocus,
         focusRequester = requester,
         background = if (primary) Accent else Color(0x33FFFFFF),
         focusedBackground = if (primary) Accent else Color(0x55FFFFFF),

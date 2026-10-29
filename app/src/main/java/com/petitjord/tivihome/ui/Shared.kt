@@ -47,6 +47,7 @@ import java.util.Locale
 const val ALL = "__all__"
 const val FAV = "__fav__"
 const val RESUME = "__resume__"
+const val RECENT = "__recent__"
 
 private val hmFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
 fun hm(ms: Long): String = synchronized(hmFormat) { hmFormat.format(Date(ms)) }

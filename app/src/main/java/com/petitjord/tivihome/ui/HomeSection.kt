@@ -2,6 +2,9 @@ package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,19 +57,19 @@ private data class HomeData(val channels: List<Channel>, val movies: List<Movie>
 
 /** Page d'accueil : tout ce qui compte pour toi, en un coup d'œil. */
 @Composable
-fun HomeSection(nav: Nav, focusContent: Boolean) {
+fun HomeSection(nav: Nav, focusContent: Boolean, onSeeAll: (Int) -> Unit) {
     val data = rememberLoad("home") {
         val ch = AppRepo.liveStreams()
         val mv = runCatching { AppRepo.vodStreams() }.getOrDefault(emptyList())
         val se = runCatching { AppRepo.seriesList() }.getOrDefault(emptyList())
         HomeData(ch, mv, se)
     }
-    LoadView(data) { d -> HomeContent(d, nav, focusContent) }
+    LoadView(data) { d -> HomeContent(d, nav, focusContent, onSeeAll) }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
+private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: (Int) -> Unit) {
     val ctx = LocalContext.current
     val favs = AppRepo.favorites
     val resume = AppRepo.resume
@@ -208,7 +212,8 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                 Column(Modifier.snapOnFocus(idx)) {
                     SectionHeader("Films ajoutés récemment", null)
                     PosterRow(recentMovies, req, title = { it.name }, image = { it.poster }, fav = { it.favKey in favs },
-                        onClick = { nav.openMovie(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) })
+                        onClick = { nav.openMovie(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) },
+                        onSeeAll = { CatalogRequest.movies = RECENT; onSeeAll(4) })
                 }
             }
         }
@@ -220,7 +225,8 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                 Column(Modifier.snapOnFocus(idx)) {
                     SectionHeader("Séries mises à jour", null)
                     PosterRow(recentSeries, req, title = { it.name }, image = { it.cover }, fav = { it.favKey in favs },
-                        onClick = { nav.openSeries(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) })
+                        onClick = { nav.openSeries(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) },
+                        onSeeAll = { CatalogRequest.series = RECENT; onSeeAll(5) })
                 }
             }
         }
@@ -240,6 +246,7 @@ private fun <T> PosterRow(
     fav: (T) -> Boolean,
     onClick: (T) -> Unit,
     onLong: (T) -> Unit,
+    onSeeAll: (() -> Unit)? = null,
 ) {
     PivotRow {
         LazyRow(Modifier.height(200.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(start = 6.dp, end = 600.dp, top = 6.dp, bottom = 6.dp)) {
@@ -251,6 +258,23 @@ private fun <T> PosterRow(
                     focusRequester = if (i == 0) requester else null,
                     modifier = Modifier.width(124.dp),
                 )
+            }
+            // Carte « Voir tout » en fin de rangée
+            if (onSeeAll != null) {
+                item {
+                    FocusBox(
+                        onClick = onSeeAll,
+                        background = Panel2,
+                        focusedBackground = Color.White,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                        modifier = Modifier.width(124.dp).fillMaxHeight(),
+                    ) { focused ->
+                        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text("→", color = if (focused) Bg else Accent, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                            Text("Voir tout", color = if (focused) Bg else Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
             }
         }
     }
@@ -293,6 +317,7 @@ private fun LiveCard(ch: Channel, now: Long, requester: FocusRequester?, onClick
 private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequester?) {
     var index by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var hasFocus by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var focusedBtn by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     LaunchedEffect(hasFocus, movies) {
         while (!hasFocus) {
             delay(8_000)
@@ -307,7 +332,20 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
         Modifier.fillMaxWidth().height(260.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
             .border(1.dp, GlassStroke, androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
-            .onFocusChanged { hasFocus = it.hasFocus },
+            .onFocusChanged { hasFocus = it.hasFocus }
+            // Défilement manuel : ▶ depuis « Détails » = film suivant, ◀ depuis « Lecture » = film précédent
+            .onPreviewKeyEvent { ev ->
+                if (ev.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when {
+                    ev.key == androidx.compose.ui.input.key.Key.DirectionRight && focusedBtn == 1 -> {
+                        index = (index + 1) % movies.size; true
+                    }
+                    ev.key == androidx.compose.ui.input.key.Key.DirectionLeft && focusedBtn == 0 && index > 0 -> {
+                        index -= 1; true
+                    }
+                    else -> false
+                }
+            },
     ) {
         androidx.compose.animation.Crossfade(targetState = details?.backdrop ?: m.poster, animationSpec = androidx.compose.animation.core.tween(700), label = "hero") { img ->
             Box(Modifier.fillMaxSize().background(Color(0xFF111622))) {
@@ -336,8 +374,14 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
             Text(m.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             details?.plot?.let { Text(it, color = Color(0xFFC9D1DC), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp) }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
-                ActionButton("▶  Lecture", primary = true, requester = requester) { nav.playVod(movieItem(m)) }
-                ActionButton("Détails") { nav.openMovie(m) }
+                ActionButton("▶  Lecture", primary = true, requester = requester, onFocus = { focusedBtn = 0 }) { nav.playVod(movieItem(m)) }
+                ActionButton("Détails", onFocus = { focusedBtn = 1 }) { nav.openMovie(m) }
+                if (hasFocus) {
+                    Text(
+                        "◀ ▶  film précédent / suivant", color = TextDim, fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically).padding(start = 6.dp),
+                    )
+                }
             }
         }
         // Points de pagination

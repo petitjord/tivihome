@@ -98,7 +98,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                 label = "section",
             ) { s ->
                 when (s) {
-                    0 -> HomeSection(nav, focusContent)
+                    0 -> HomeSection(nav, focusContent, onSeeAll = { section -> selected = section })
                     1 -> GuideSection(nav, focusContent)
                     2 -> SearchSection(nav)
                     3 -> ReplaySection(nav, focusContent)

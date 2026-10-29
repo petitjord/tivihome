@@ -72,6 +72,8 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
             titleOf = { it.name },
             imageOf = { it.poster },
             metaOf = { m -> m.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
+            addedOf = { it.added },
+            initialCat = CatalogRequest.movies.also { CatalogRequest.movies = null },
             detailsOf = { m ->
                 val i = AppRepo.vodInfo(m)
                 HeroDetails(i.plot, i.backdrop, i.year, i.durationText, i.genre, i.rating?.takeIf { it != "0" && it.isNotBlank() }, i.cast, i.director)
@@ -106,6 +108,8 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
             titleOf = { it.name },
             imageOf = { it.cover },
             metaOf = { se -> se.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
+            addedOf = { it.added },
+            initialCat = CatalogRequest.series.also { CatalogRequest.series = null },
             detailsOf = { se ->
                 val i = AppRepo.seriesInfo(se.seriesId)
                 HeroDetails(i.plot ?: se.plot, i.backdrop, null, null, i.genre, se.rating?.takeIf { it != "0" && it.isNotBlank() }, i.cast, null)
@@ -121,7 +125,7 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
     }
 }
 
-/** Catégories à gauche, grille d'affiches à droite. */
+/** Catégories à gauche, fiche de l'élément sélectionné en haut, rangée d'affiches en bas. */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun <T> CatalogGrid(
@@ -136,15 +140,17 @@ private fun <T> CatalogGrid(
     imageOf: (T) -> String?,
     metaOf: (T) -> String?,
     detailsOf: suspend (T) -> HeroDetails?,
+    addedOf: (T) -> Long,
+    initialCat: String?,
     cell: @Composable (T, androidx.compose.ui.focus.FocusRequester?, () -> Unit) -> Unit,
 ) {
     val resumeKeys = AppRepo.resume
     val hasResume = remember(items, resumeKeys) { items.any(inProgress) }
     val groups = remember(cats, hasResume) {
         (if (hasResume) listOf(Category(RESUME, "▶ En cours")) else emptyList()) +
-            listOf(Category(FAV, "★ Favoris"), Category(ALL, "Tout")) + cats
+            listOf(Category(RECENT, "Ajouts récents"), Category(FAV, "★ Favoris"), Category(ALL, "Tout")) + cats
     }
-    var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
+    var catId by rememberSaveable { mutableStateOf(initialCat ?: cats.firstOrNull()?.id ?: ALL) }
     var focusedIdx by rememberSaveable { mutableIntStateOf(0) }
     val favs = AppRepo.favorites
     val list = remember(catId, items, favs, resumeKeys, AppRepo.hiddenGroups, AppRepo.lockedGroups, AppRepo.unlocked, AppRepo.profileId) {
@@ -152,13 +158,14 @@ private fun <T> CatalogGrid(
             ALL -> items.filter { visibleCat(categoryOf(it)) }
             FAV -> items.filter(isFav)
             RESUME -> items.filter(inProgress)
+            RECENT -> items.filter { visibleCat(categoryOf(it)) }.sortedByDescending(addedOf).take(200)
             else -> items.filter { categoryOf(it) == catId }
         }
     }
-    val gridState = rememberLazyGridState()
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
     var firstCat by remember { mutableStateOf(true) }
     LaunchedEffect(catId) {
-        if (firstCat) firstCat = false else { gridState.scrollToItem(0); focusedIdx = 0 }
+        if (firstCat) firstCat = false else { rowState.scrollToItem(0); focusedIdx = 0 }
     }
     val restore = rememberInitialFocus(focusContent)
 
@@ -171,20 +178,20 @@ private fun <T> CatalogGrid(
                 if (hero == null) null else { kotlinx.coroutines.delay(300); runCatching { detailsOf(hero) }.getOrNull() }
             }
             val d = (det.state as? Load.Ok<HeroDetails?>)?.data
-            Box(Modifier.fillMaxWidth().height(230.dp)) {
+            Box(Modifier.fillMaxWidth().weight(1f)) {
                 val img = d?.backdrop ?: hero?.let(imageOf)
                 if (img != null) {
                     AsyncImage(
                         img, null, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd,
-                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(Alignment.TopEnd),
+                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.66f).align(Alignment.TopEnd),
                     )
                 }
                 // Fondu de l'image dans le fond, vers la gauche et vers le bas
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0.30f to Bg, 0.55f to Bg.copy(alpha = 0.75f), 1f to Color.Transparent)))
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Bg)))
-                Column(Modifier.fillMaxWidth(0.55f).padding(start = 16.dp, top = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.fillMaxWidth(0.52f).padding(start = 16.dp, top = 6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
-                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 24.sp,
+                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 26.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     val meta = listOfNotNull(d?.year, d?.duration, d?.genre, (d?.rating ?: hero?.let(metaOf))?.let { if (it.startsWith("★")) it else "★ $it" })
@@ -199,35 +206,40 @@ private fun <T> CatalogGrid(
                             else -> ""
                         },
                         color = Color(0xFFD0D7E2), fontSize = 13.sp, lineHeight = 18.sp,
-                        maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
+                        maxLines = 6, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(6.dp))
-            Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp)) {
-            if (AppRepo.groupNeedsPin(catId)) {
-                LockedGroupView()
-            } else if (list.isEmpty()) {
-                EmptyText(if (catId == FAV) "Aucun favori.\nMaintiens OK sur une affiche pour l'ajouter." else "Rien dans cette catégorie.")
-            } else {
-                ScrollSpec(pivotSpec(0f)) {
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = GridCells.Adaptive(104.dp),
-                    modifier = Modifier.fillMaxSize().focusRestorer(),
-                    contentPadding = PaddingValues(6.dp, 6.dp, 6.dp, 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    itemsIndexed(list) { i, item ->
-                        cell(
-                            item,
-                            if (i == focusedIdx.coerceAtMost(list.lastIndex)) restore else null,
-                        ) { focusedIdx = i }
+            // Une seule rangée d'affiches : l'affiche sélectionnée reste calée à gauche
+            Text(
+                "${groups.firstOrNull { it.id == catId }?.name ?: ""}  ·  ${list.size} $unit",
+                color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
+            )
+            Box(Modifier.fillMaxWidth().height(196.dp).padding(start = 10.dp)) {
+                if (AppRepo.groupNeedsPin(catId)) {
+                    LockedGroupView()
+                } else if (list.isEmpty()) {
+                    EmptyText(if (catId == FAV) "Aucun favori. Maintiens OK sur une affiche pour l'ajouter." else "Rien dans cette catégorie.")
+                } else {
+                    PivotRow {
+                        LazyRow(
+                            state = rowState,
+                            modifier = Modifier.fillMaxSize().focusRestorer(),
+                            contentPadding = PaddingValues(start = 6.dp, end = 800.dp, top = 8.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            itemsIndexed(list) { i, item ->
+                                Box(Modifier.width(120.dp)) {
+                                    cell(
+                                        item,
+                                        if (i == focusedIdx.coerceAtMost(list.lastIndex)) restore else null,
+                                    ) { focusedIdx = i }
+                                }
+                            }
+                        }
                     }
                 }
-                }
-            }
             }
         }
     }
@@ -360,3 +372,9 @@ data class HeroDetails(
     val cast: String?,
     val director: String?,
 )
+
+/** Catégorie à ouvrir directement en arrivant sur Films / Séries (bouton « Voir tout »). */
+object CatalogRequest {
+    var movies: String? = null
+    var series: String? = null
+}
