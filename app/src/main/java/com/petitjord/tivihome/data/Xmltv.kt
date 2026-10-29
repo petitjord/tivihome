@@ -71,7 +71,7 @@ class XmltvGuide(
         }
 
         private fun download(url: String, target: File) {
-            val req = Request.Builder().url(url).header("User-Agent", USER_AGENT).build()
+            val req = Request.Builder().url(url).header("User-Agent", Net.userAgent).build()
             http.newCall(req).execute().use { r ->
                 if (!r.isSuccessful) throw IOException("Le guide a répondu ${r.code}")
                 val body = r.body ?: throw IOException("Guide vide")

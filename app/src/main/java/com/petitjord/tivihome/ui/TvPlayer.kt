@@ -21,7 +21,6 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.petitjord.tivihome.data.AppRepo
 import com.petitjord.tivihome.data.Channel
-import com.petitjord.tivihome.data.USER_AGENT
 
 /**
  * Lecteur unique de l'appli : la même lecture passe de l'aperçu au plein écran
@@ -33,7 +32,7 @@ class TvPlayer(ctx: Context) {
     val exo: ExoPlayer = run {
         // Même client réseau que l'API : tolère les certificats des serveurs IPTV enregistrés
         val http = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(com.petitjord.tivihome.data.Net.client)
-            .setUserAgent(USER_AGENT)
+            .setUserAgent(com.petitjord.tivihome.data.Net.userAgent)
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http)))
             .build()

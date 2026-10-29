@@ -12,7 +12,6 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-const val USER_AGENT = "Tivihome/1.0 (Android TV)"
 
 /** Client de l'API publique Xtream Codes (player_api.php). */
 class XtreamClient(val account: Account) {
@@ -47,8 +46,9 @@ class XtreamClient(val account: Account) {
                 .addQueryParameter("password", account.password)
             if (action != null) url.addQueryParameter("action", action)
             params.forEach { (k, v) -> url.addQueryParameter(k, v) }
-            val req = Request.Builder().url(url.build()).header("User-Agent", USER_AGENT).build()
+            val req = Request.Builder().url(url.build()).header("User-Agent", Net.userAgent).build()
             http.newCall(req).execute().use { r ->
+                if (r.code == 403) throw ForbiddenException()
                 if (!r.isSuccessful) throw IOException("Le serveur a répondu ${r.code}")
                 r.body?.string() ?: ""
             }
@@ -274,3 +274,6 @@ private inline fun <T> JSONArray.mapObj(f: (JSONObject) -> T): List<T> {
     for (i in 0 until length()) optJSONObject(i)?.let { out += f(it) }
     return out
 }
+
+/** Le serveur refuse l'accès (souvent : appli non reconnue ou adresse incomplète). */
+class ForbiddenException : IOException("accès refusé par le serveur (403)")

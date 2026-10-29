@@ -75,6 +75,7 @@ object AppRepo {
         liveFormat = prefs.getString("liveFormat", "ts") ?: "ts"
         xmltvUrl = prefs.getString("xmltvUrl", "") ?: ""
         resume = readResume()
+        prefs.getString("ua", null)?.let { Net.userAgent = it }
         startOnLastChannel = prefs.getBoolean("startLast", false)
         subtitleSize = prefs.getInt("subSize", 1)
         hiddenGroups = prefs.getStringSet("hiddenGroups", emptySet())!!.toSet()
@@ -92,7 +93,7 @@ object AppRepo {
 
     suspend fun login(account: Account): Boolean {
         var c = XtreamClient(account)
-        val ok = try {
+        suspend fun tryAuth(): Boolean = try {
             c.authenticate()
         } catch (e: javax.net.ssl.SSLException) {
             // HTTPS refusé : beaucoup de serveurs IPTV répondent aussi en HTTP
@@ -100,6 +101,26 @@ object AppRepo {
             c = XtreamClient(account.copy(server = "http://" + c.base.removePrefix("https://")))
             c.authenticate()
         }
+        // 403 : le serveur filtre les applis ; on essaie des identifiants génériques.
+        var ok = false
+        var lastError: Exception? = null
+        for (ua in listOf(Net.userAgent) + Net.userAgents.filter { it != Net.userAgent }) {
+            Net.userAgent = ua
+            try {
+                ok = tryAuth()
+                lastError = null
+                break
+            } catch (e: ForbiddenException) {
+                lastError = e
+            }
+        }
+        lastError?.let {
+            throw java.io.IOException(
+                "le serveur refuse l'accès (403). Vérifie l'adresse complète avec le port (ex. http://exemple.net:8080), " +
+                    "telle qu'elle apparaît dans ta playlist ou ton e-mail d'abonnement.",
+            )
+        }
+        prefs.edit().putString("ua", Net.userAgent).apply()
         if (!ok) return false
         prefs.edit()
             .putString("server", c.base)

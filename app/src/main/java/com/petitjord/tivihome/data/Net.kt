@@ -21,6 +21,18 @@ object Net {
         if (host.isNotBlank()) trustedHosts += host
     }
 
+    /** Identifiants d'appli génériques essayés quand un serveur répond 403. */
+    val userAgents = listOf(
+        "VLC/3.0.20 LibVLC/3.0.20",
+        "Mozilla/5.0 (Linux; Android 11; TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "okhttp/4.12.0",
+        "Lavf/60.3.100",
+        "Tivihome/1.0 (Android TV)",
+    )
+
+    /** User-Agent utilisé pour l'API, les flux et le guide (mémorisé après une connexion réussie). */
+    @Volatile var userAgent: String = userAgents.first()
+
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
