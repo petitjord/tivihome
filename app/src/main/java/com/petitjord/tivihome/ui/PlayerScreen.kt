@@ -166,6 +166,7 @@ fun LiveFullScreen(nav: Nav) {
             .focusable(),
     ) {
         VideoSurface(Modifier.fillMaxSize())
+        WatchClock(Modifier.align(Alignment.TopStart))
 
         if (tv.buffering && tv.error == null) {
             CircularProgressIndicator(color = Accent, modifier = Modifier.align(Alignment.Center).size(56.dp))
@@ -201,7 +202,7 @@ fun LiveFullScreen(nav: Nav) {
             }
         }
         if (tv.delayMs > 0 && tv.pausedAt == null) {
-            Box(Modifier.align(Alignment.TopStart).padding(28.dp).background(Color(0xDD0B0E13), RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Box(Modifier.align(Alignment.TopCenter).padding(28.dp).background(Color(0xDD0B0E13), RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text("Différé −${tv.delayMs / 60_000} min  ·  ⏩ ou ■ : retour au direct", color = Gold, fontSize = 14.sp)
             }
         }
@@ -413,6 +414,7 @@ fun VodScreen(queue: List<VodItem>, startIndex: Int) {
         },
     ) {
         VideoSurface(Modifier.fillMaxSize(), withControls = true)
+        WatchClock(Modifier.align(Alignment.TopStart))
         if (tv.buffering && tv.error == null) {
             CircularProgressIndicator(color = Accent, modifier = Modifier.align(Alignment.Center).size(56.dp))
         }
@@ -519,5 +521,25 @@ private fun TrackRow(label: String, selected: Boolean, requester: FocusRequester
             Spacer(Modifier.width(12.dp))
             Text(label, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+    }
+}
+
+/** Heure affichée en permanence en haut à gauche pendant la lecture. */
+@Composable
+fun WatchClock(modifier: Modifier = Modifier) {
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            // Se réveille pile au changement de minute
+            delay(60_000 - now % 60_000)
+        }
+    }
+    Box(
+        modifier.padding(start = 32.dp, top = 22.dp)
+            .background(Color(0x990B0E13), RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Text(hm(now), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium)
     }
 }
