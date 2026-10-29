@@ -97,7 +97,7 @@ private fun FavContent(all: FavData, favs: Set<String>, nav: Nav, focusContent: 
                     items(movies) { m ->
                         Poster(
                             m.name, m.poster, true,
-                            onClick = { nav.playVod(movieItem(m)) },
+                            onClick = { nav.openMovie(m) },
                             onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                             focusRequester = if (resume.isEmpty() && channels.isEmpty() && m == movies.first()) restore else null,
                             modifier = Modifier.width(144.dp),

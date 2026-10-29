@@ -65,9 +65,9 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
     val groups = remember(cats) { listOf(Category(FAV, "★ Favoris"), Category(ALL, "Toutes")) + cats }
     val favs = AppRepo.favorites
     var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
-    val list = remember(catId, channels, favs) {
+    val list = remember(catId, channels, favs, AppRepo.hiddenGroups) {
         when (catId) {
-            ALL -> channels
+            ALL -> channels.filter { it.categoryId !in AppRepo.hiddenGroups }
             FAV -> channels.filter { it.favKey in favs }
             else -> channels.filter { it.categoryId == catId }
         }
@@ -89,7 +89,7 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(groups) { g ->
+            items(groups.filter { it.id !in AppRepo.hiddenGroups }) { g ->
                 val sel = g.id == catId
                 FocusBox(
                     onClick = { catId = g.id },
@@ -134,7 +134,7 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
 private fun GuideHeader(f: Focused?, modifier: Modifier) {
     Row(modifier.background(Panel).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         if (f == null) {
-            Text("Guide TV — déplace-toi dans la grille avec les flèches", color = TextDim)
+            Text("Guide TV — OK : regarder · OK maintenu sur une émission à venir : rappel", color = TextDim)
         } else {
             ChannelLogo(f.channel.icon, f.channel.name, Modifier.size(width = 120.dp, height = 80.dp))
             Spacer(Modifier.width(18.dp))
@@ -213,7 +213,7 @@ private fun GuideRow(
                     when (seg) {
                         is Seg.Gap -> Spacer(Modifier.width(seg.width))
                         is Seg.Prog -> {
-                            ProgCell(seg, if (first) firstCellRequester else null, onFocus, onPlay)
+                            ProgCell(seg, ch, if (first) firstCellRequester else null, onFocus, onPlay)
                             first = false
                         }
                     }
@@ -242,14 +242,27 @@ private fun buildSegments(progs: List<Programme>, start: Long, end: Long): List<
 @Composable
 private fun ProgCell(
     seg: Seg.Prog,
+    ch: Channel,
     requester: androidx.compose.ui.focus.FocusRequester?,
     onFocus: (Programme?) -> Unit,
     onPlay: () -> Unit,
 ) {
     val p = seg.p
     val live = p?.isNow() ?: true
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val reminded = p != null && AppRepo.reminders.any { it.streamId == ch.streamId && it.start == p.start }
     FocusBox(
         onClick = onPlay,
+        onLongClick = if (p == null || live) null else {
+            {
+                val on = AppRepo.toggleReminder(ch, p)
+                android.widget.Toast.makeText(
+                    ctx,
+                    if (on) "Rappel : « ${p.title} » à ${hm(p.start)}" else "Rappel supprimé",
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }
+        },
         onFocus = { onFocus(p) },
         focusRequester = requester,
         shape = RoundedCornerShape(4.dp),
@@ -259,7 +272,7 @@ private fun ProgCell(
     ) { _ ->
         Column(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 5.dp), verticalArrangement = Arrangement.Center) {
             Text(
-                p?.title ?: "Pas d'information", color = Color.White, fontSize = 13.sp,
+                (if (reminded) "🔔 " else "") + (p?.title ?: "Pas d'information"), color = Color.White, fontSize = 13.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             if (p != null) {

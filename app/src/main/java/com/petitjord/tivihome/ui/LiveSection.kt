@@ -68,9 +68,9 @@ private fun LiveContent(cats: List<Category>, channels: List<Channel>, nav: Nav,
     val groups = remember(cats) {
         listOf(Category(FAV, "★ Favoris"), Category(ALL, "Toutes les chaînes")) + cats
     }
-    val list = remember(catId, channels, favs) {
+    val list = remember(catId, channels, favs, AppRepo.hiddenGroups) {
         when (catId) {
-            ALL -> channels
+            ALL -> channels.filter { it.categoryId !in AppRepo.hiddenGroups }
             FAV -> channels.filter { it.favKey in favs }
             else -> channels.filter { it.categoryId == catId }
         }

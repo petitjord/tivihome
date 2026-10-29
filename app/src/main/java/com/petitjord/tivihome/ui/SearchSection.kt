@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -83,6 +84,12 @@ private fun SearchContent(d: SearchData, nav: Nav) {
     val channels = remember(words, d) { d.channels.filter { match(it.name) }.take(60) }
     val movies = remember(words, d) { d.movies.filter { match(it.name) }.take(60) }
     val series = remember(words, d) { d.series.filter { match(it.name) }.take(60) }
+    // Recherche dans le guide (si un guide XMLTV est chargé)
+    val onAir = remember(words, d) {
+        val g = AppRepo.xmltvGuide
+        if (g == null || words.isEmpty()) emptyList()
+        else g.search({ match(it) }).mapNotNull { (id, p) -> g.channelFor(id, d.channels)?.let { it to p } }
+    }
 
     Column(Modifier.fillMaxSize().padding(start = 24.dp, top = 22.dp, end = 24.dp)) {
         OutlinedTextField(
@@ -99,7 +106,7 @@ private fun SearchContent(d: SearchData, nav: Nav) {
 
         if (words.isEmpty()) {
             EmptyText("Tape quelques lettres : la recherche couvre les chaînes, les films et les séries.\nLes accents et majuscules sont ignorés.")
-        } else if (channels.isEmpty() && movies.isEmpty() && series.isEmpty()) {
+        } else if (channels.isEmpty() && movies.isEmpty() && series.isEmpty() && onAir.isEmpty()) {
             EmptyText("Aucun résultat pour « $q ».")
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -125,6 +132,38 @@ private fun SearchContent(d: SearchData, nav: Nav) {
                         }
                     }
                 }
+                if (onAir.isNotEmpty()) {
+                    item { SectionHeader("Au programme", "${onAir.size}") }
+                    items(onAir) { (ch, p) ->
+                        val live = p.isNow()
+                        val reminded = AppRepo.reminders.any { it.streamId == ch.streamId && it.start == p.start }
+                        FocusBox(
+                            onClick = {
+                                if (live) nav.playLive(listOf(ch), 0)
+                                else {
+                                    val on = AppRepo.toggleReminder(ch, p)
+                                    android.widget.Toast.makeText(ctx, if (on) "Rappel ajouté" else "Rappel supprimé", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            background = Panel,
+                            modifier = Modifier.fillMaxWidth().height(58.dp),
+                        ) {
+                            androidx.compose.foundation.layout.Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    if (live) "EN DIRECT" else dayTime(p.start),
+                                    color = if (live) Accent else TextDim, fontSize = 13.sp, modifier = Modifier.width(130.dp),
+                                )
+                                ChannelLogo(ch.icon, ch.name, Modifier.size(width = 52.dp, height = 34.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    (if (reminded) "🔔 " else "") + p.title, color = Color.White, fontSize = 15.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                )
+                                Text(if (live) "OK : regarder" else "OK : rappel", color = TextDim, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
                 if (movies.isNotEmpty()) {
                     item { SectionHeader("Films", "${movies.size}") }
                     item {
@@ -132,7 +171,7 @@ private fun SearchContent(d: SearchData, nav: Nav) {
                             itemsIndexed(movies) { _, m ->
                                 Poster(
                                     m.name, m.poster, m.favKey in favs,
-                                    onClick = { nav.playVod(movieItem(m)) },
+                                    onClick = { nav.openMovie(m) },
                                     onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                                     modifier = Modifier.width(138.dp),
                                 )
@@ -158,4 +197,18 @@ private fun SearchContent(d: SearchData, nav: Nav) {
             }
         }
     }
+}
+
+/** « Auj. 20:45 », « Dem. 21:00 » ou « Sam. 18:30 ». */
+fun dayTime(ms: Long): String {
+    val cal = java.util.Calendar.getInstance()
+    val today = cal.get(java.util.Calendar.DAY_OF_YEAR)
+    cal.timeInMillis = ms
+    val d = cal.get(java.util.Calendar.DAY_OF_YEAR) - today
+    val day = when (d) {
+        0 -> "Auj."
+        1 -> "Dem."
+        else -> java.text.SimpleDateFormat("EEE", java.util.Locale.FRANCE).format(java.util.Date(ms)).replaceFirstChar { it.uppercase() }
+    }
+    return "$day ${hm(ms)}"
 }

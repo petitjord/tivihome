@@ -151,6 +151,7 @@ class XtreamClient(val account: Account) {
             categoryId = o.optString("category_id"),
             ext = o.s("container_extension") ?: "mp4",
             rating = o.s("rating"),
+            added = o.optString("added").toLongOrNull() ?: 0L,
         )
     }
 
@@ -165,6 +166,8 @@ class XtreamClient(val account: Account) {
             cover = o.s("cover"),
             categoryId = o.optString("category_id"),
             plot = o.s("plot"),
+            added = o.optString("last_modified").toLongOrNull() ?: 0L,
+            rating = o.s("rating"),
         )
     }
 
@@ -185,8 +188,38 @@ class XtreamClient(val account: Account) {
             }
             is JSONArray -> addFrom(eps, 0)
         }
-        val plot = j.optJSONObject("info")?.s("plot")
-        return SeriesInfo(plot, episodes.sortedWith(compareBy({ it.season }, { it.episodeNum })))
+        val info = j.optJSONObject("info")
+        return SeriesInfo(
+            plot = info?.s("plot"),
+            episodes = episodes.sortedWith(compareBy({ it.season }, { it.episodeNum })),
+            cast = info?.s("cast"),
+            genre = info?.s("genre"),
+            backdrop = info?.let { firstImage(it, "backdrop_path") },
+            trailer = info?.s("youtube_trailer"),
+        )
+    }
+
+    /** Fiche détaillée d'un film (get_vod_info). */
+    suspend fun vodInfo(streamId: Int): MovieInfo {
+        val info = obj(api("get_vod_info", mapOf("vod_id" to "$streamId"))).optJSONObject("info") ?: JSONObject()
+        return MovieInfo(
+            plot = info.s("plot") ?: info.s("description"),
+            cast = info.s("cast") ?: info.s("actors"),
+            director = info.s("director"),
+            genre = info.s("genre"),
+            year = info.s("releasedate")?.take(4) ?: info.s("year"),
+            durationText = info.s("duration"),
+            rating = info.s("rating"),
+            backdrop = firstImage(info, "backdrop_path"),
+            trailer = info.s("youtube_trailer"),
+        )
+    }
+
+    /** backdrop_path peut être une chaîne ou un tableau d'URL. */
+    private fun firstImage(o: JSONObject, key: String): String? = when (val v = o.opt(key)) {
+        is JSONArray -> (0 until v.length()).map { v.optString(it) }.firstOrNull { it.startsWith("http") }
+        is String -> v.takeIf { it.startsWith("http") }
+        else -> null
     }
 
     private fun episode(o: JSONObject, seasonHint: Int): Episode {

@@ -71,7 +71,12 @@ fun LiveFullScreen(nav: Nav) {
     val tv = LocalTvPlayer.current
     val ctx = LocalContext.current
     var listOpen by remember { mutableStateOf(false) }
+    var tracksOpen by remember { mutableStateOf(false) }
     var infoVisible by remember { mutableStateOf(true) }
+    var digits by remember { mutableStateOf("") }
+    var okLong by remember { mutableStateOf(false) }
+    var okDown by remember { mutableStateOf(false) }
+    val allChannels = rememberLoad("all-channels") { AppRepo.liveStreams() }
     var activity by remember { mutableIntStateOf(0) } // relance les minuteurs à chaque touche
     val rootFocus = remember { FocusRequester() }
 
@@ -83,14 +88,29 @@ fun LiveFullScreen(nav: Nav) {
     LaunchedEffect(listOpen, activity) {
         if (listOpen) { delay(10_000); listOpen = false }
     }
-    LaunchedEffect(listOpen) {
-        if (!listOpen) { delay(30); runCatching { rootFocus.requestFocus() } }
+    LaunchedEffect(listOpen, tracksOpen) {
+        if (!listOpen && !tracksOpen) { delay(30); runCatching { rootFocus.requestFocus() } }
+    }
+    // Saisie d'un numéro : on valide 1,5 s après le dernier chiffre.
+    LaunchedEffect(digits) {
+        if (digits.isEmpty()) return@LaunchedEffect
+        delay(1_500)
+        val all = (allChannels.state as? Load.Ok<List<Channel>>)?.data ?: emptyList()
+        if (!tv.jumpToNumber(digits.toInt(), all)) {
+            android.widget.Toast.makeText(ctx, "Pas de chaîne n° $digits", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        digits = ""
     }
     // Nouveau programme / nouvelle chaîne : on montre le bandeau
     LaunchedEffect(tv.channel) { infoVisible = true; activity++ }
 
     BackHandler {
-        if (listOpen) listOpen = false else nav.back()
+        when {
+            tracksOpen -> tracksOpen = false
+            listOpen -> listOpen = false
+            digits.isNotEmpty() -> digits = ""
+            else -> nav.back()
+        }
     }
 
     Box(
@@ -100,14 +120,39 @@ fun LiveFullScreen(nav: Nav) {
             .onPreviewKeyEvent { activity++; false }
             .focusRequester(rootFocus)
             .onKeyEvent { ev ->
-                if (listOpen || ev.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (listOpen || tracksOpen) return@onKeyEvent false
+                val isOk = ev.key == Key.DirectionCenter || ev.key == Key.Enter || ev.key == Key.NumPadEnter
+                if (isOk) {
+                    // OK court : liste des chaînes. OK maintenu : pistes audio / sous-titres.
+                    if (ev.type == KeyEventType.KeyDown) {
+                        if (ev.nativeKeyEvent.repeatCount == 0) { okDown = true; okLong = false }
+                        if (ev.nativeKeyEvent.repeatCount == 1) { okLong = true; tracksOpen = true; infoVisible = false }
+                    } else if (ev.type == KeyEventType.KeyUp) {
+                        if (okDown && !okLong) { listOpen = true; infoVisible = false }
+                        okDown = false
+                    }
+                    return@onKeyEvent true
+                }
+                if (ev.type != KeyEventType.KeyDown) return@onKeyEvent false
+                val digit = digitOf(ev.key)
+                if (digit != null) {
+                    if (digit == 0 && digits.isEmpty()) {
+                        // 0 seul : retour à la chaîne précédente
+                        val prev = AppRepo.previousChannelId
+                        val all = (allChannels.state as? Load.Ok<List<Channel>>)?.data ?: emptyList()
+                        val target = tv.channels.firstOrNull { it.streamId == prev } ?: all.firstOrNull { it.streamId == prev }
+                        if (target != null) tv.playChannel(target, if (target in tv.channels) tv.channels else all)
+                    } else if (digits.length < 4) {
+                        digits += digit
+                    }
+                    return@onKeyEvent true
+                }
                 when (ev.key) {
                     Key.DirectionUp, Key.ChannelUp, Key.PageUp -> { tv.zap(-1); true }
                     Key.DirectionDown, Key.ChannelDown, Key.PageDown -> { tv.zap(1); true }
-                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.DirectionLeft, Key.Menu -> {
-                        listOpen = true; infoVisible = false; true
-                    }
+                    Key.DirectionLeft, Key.Menu -> { listOpen = true; infoVisible = false; true }
                     Key.DirectionRight, Key.Info -> { infoVisible = !infoVisible; true }
+                    Key.MediaAudioTrack, Key.Captions -> { tracksOpen = true; true }
                     else -> false
                 }
             }
@@ -130,6 +175,26 @@ fun LiveFullScreen(nav: Nav) {
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             if (ch != null) LiveInfoBar(ch, tv.channels.indexOf(ch), tv.channels.size)
+        }
+
+        // Numéro en cours de saisie
+        if (digits.isNotEmpty()) {
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(32.dp)
+                    .background(Color(0xDD0B0E13), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+            ) {
+                Text(digits, color = Accent, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        AnimatedVisibility(
+            visible = tracksOpen,
+            enter = slideInHorizontally(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutHorizontally(tween(180)) { it } + fadeOut(tween(180)),
+            modifier = Modifier.align(Alignment.CenterEnd),
+        ) {
+            TracksPanel(onClose = { tracksOpen = false })
         }
 
         AnimatedVisibility(
@@ -211,7 +276,7 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
             .padding(start = 48.dp, end = 48.dp, top = 70.dp, bottom = 36.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChannelLogo(ch.icon, ch.name, Modifier.size(width = 150.dp, height = 96.dp))
+        ChannelLogo(ch.icon, ch.name, Modifier.size(width = 170.dp, height = 108.dp))
         Spacer(Modifier.width(24.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -245,37 +310,70 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            if (index >= 0) Text("${index + 1} / $total", color = Color.White, fontSize = 14.sp)
-            Text("▲▼ zapper   OK liste", color = TextDim, fontSize = 12.sp)
+            Text(hm(System.currentTimeMillis()), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
+            if (index >= 0) Text("${index + 1} / $total", color = TextDim, fontSize = 13.sp)
+            Text("▲▼ zapper · OK liste · OK maintenu pistes · 0 précédente", color = TextDim, fontSize = 11.sp)
         }
     }
 }
 
-/** Film, épisode ou replay en plein écran, avec commandes et reprise automatique. */
+/** Film, épisode ou replay en plein écran : reprise, épisode suivant automatique, passer l'intro. */
 @Composable
-fun VodScreen(item: VodItem) {
+fun VodScreen(queue: List<VodItem>, startIndex: Int) {
     val tv = LocalTvPlayer.current
     val ctx = LocalContext.current
+    var index by remember { mutableIntStateOf(startIndex.coerceIn(0, queue.lastIndex)) }
+    val item = queue[index]
+    val next = queue.getOrNull(index + 1)
+    var countdown by remember { mutableIntStateOf(-1) }
+    var position by remember { mutableStateOf(0L) }
+    val isEpisode = item.key?.startsWith("episode:") == true
+
     LaunchedEffect(item.url) {
+        countdown = -1
         val start = item.key?.let { AppRepo.resumePosition(it) } ?: 0L
         tv.playUrl(item.url, start)
         if (start > 0) {
             android.widget.Toast.makeText(ctx, "Reprise à ${formatDuration(start)}", android.widget.Toast.LENGTH_SHORT).show()
         }
-        // Mémorise la position toutes les 10 secondes
+        var ticks = 0
         while (true) {
-            delay(10_000)
-            if (tv.exo.isPlaying) AppRepo.saveProgress(item, tv.exo.currentPosition, tv.exo.duration)
+            delay(1_000)
+            position = tv.exo.currentPosition
+            if (++ticks % 10 == 0 && tv.exo.isPlaying) AppRepo.saveProgress(item, tv.exo.currentPosition, tv.exo.duration)
         }
+    }
+    // Fin de l'épisode : compte à rebours puis épisode suivant
+    LaunchedEffect(tv.ended, index) {
+        if (!tv.ended) return@LaunchedEffect
+        AppRepo.saveProgress(item, tv.exo.duration, tv.exo.duration)
+        if (next == null) return@LaunchedEffect
+        for (c in 8 downTo 1) { countdown = c; delay(1_000) }
+        countdown = -1
+        index++
     }
     DisposableEffect(Unit) {
         onDispose {
-            AppRepo.saveProgress(item, tv.exo.currentPosition, tv.exo.duration)
+            AppRepo.saveProgress(queue[index], tv.exo.currentPosition, tv.exo.duration)
             tv.stop()
         }
     }
+    val showSkip = isEpisode && position in 10_000L..240_000L
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent { ev ->
+            if (ev.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when {
+                // Pendant le compte à rebours : OK lance tout de suite l'épisode suivant
+                countdown > 0 && (ev.key == Key.DirectionCenter || ev.key == Key.Enter) -> { countdown = -1; index++; true }
+                showSkip && (ev.key == Key.MediaFastForward || ev.key == Key.Menu) -> {
+                    tv.exo.seekTo(tv.exo.currentPosition + 85_000); true
+                }
+                next != null && ev.key == Key.MediaNext -> { index++; true }
+                else -> false
+            }
+        },
+    ) {
         VideoSurface(Modifier.fillMaxSize(), withControls = true)
         if (tv.buffering && tv.error == null) {
             CircularProgressIndicator(color = Accent, modifier = Modifier.align(Alignment.Center).size(56.dp))
@@ -283,6 +381,26 @@ fun VodScreen(item: VodItem) {
         tv.error?.let {
             ErrorBox("$it\nAppuie sur Retour pour revenir.", Modifier.align(Alignment.Center))
         }
+        if (showSkip) {
+            Pill("⏩  Passer l'intro : touche Menu ou ⏩", Modifier.align(Alignment.TopEnd).padding(28.dp))
+        }
+        if (countdown > 0 && next != null) {
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(36.dp)
+                    .background(Color(0xEE0B0E13), RoundedCornerShape(14.dp)).padding(22.dp),
+            ) {
+                Text("Épisode suivant dans $countdown s", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(next.title, color = Color.White, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(360.dp))
+                Text("OK pour lancer maintenant · Retour pour quitter", color = TextDim, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Pill(text: String, modifier: Modifier) {
+    Box(modifier.background(Color(0xDD0B0E13), RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
+        Text(text, color = Color.White, fontSize = 14.sp)
     }
 }
 
@@ -296,5 +414,72 @@ fun formatDuration(ms: Long): String {
 private fun ErrorBox(text: String, modifier: Modifier) {
     Box(modifier.background(Color(0xDD1C2330), RoundedCornerShape(12.dp)).padding(24.dp)) {
         Text(text, color = Color.White, fontSize = 16.sp)
+    }
+}
+
+private fun digitOf(k: Key): Int? = when (k) {
+    Key.Zero, Key.NumPad0 -> 0
+    Key.One, Key.NumPad1 -> 1
+    Key.Two, Key.NumPad2 -> 2
+    Key.Three, Key.NumPad3 -> 3
+    Key.Four, Key.NumPad4 -> 4
+    Key.Five, Key.NumPad5 -> 5
+    Key.Six, Key.NumPad6 -> 6
+    Key.Seven, Key.NumPad7 -> 7
+    Key.Eight, Key.NumPad8 -> 8
+    Key.Nine, Key.NumPad9 -> 9
+    else -> null
+}
+
+/** Choix des pistes audio et sous-titres, par-dessus la vidéo. */
+@Composable
+fun TracksPanel(onClose: () -> Unit) {
+    val tv = LocalTvPlayer.current
+    var tick by remember { mutableIntStateOf(0) }
+    val audio = remember(tick) { tv.tracks(androidx.media3.common.C.TRACK_TYPE_AUDIO) }
+    val subs = remember(tick) { tv.tracks(androidx.media3.common.C.TRACK_TYPE_TEXT) }
+    val first = rememberInitialFocus(true)
+
+    Column(
+        Modifier.width(380.dp).fillMaxHeight()
+            .background(Brush.horizontalGradient(listOf(Color(0x000B0E13), Color(0xE60B0E13), Color(0xF20B0E13))))
+            .padding(start = 40.dp, top = 28.dp, end = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Audio", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        if (audio.isEmpty()) Text("Une seule piste", color = TextDim, fontSize = 14.sp)
+        audio.forEachIndexed { i, t ->
+            TrackRow(t.label, t.selected, if (i == 0) first else null) {
+                tv.selectTrack(androidx.media3.common.C.TRACK_TYPE_AUDIO, t); tick++
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("Sous-titres", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        TrackRow("Désactivés", subs.none { it.selected }, if (audio.isEmpty()) first else null) {
+            tv.selectTrack(androidx.media3.common.C.TRACK_TYPE_TEXT, null); tick++
+        }
+        subs.forEach { t ->
+            TrackRow(t.label, t.selected, null) {
+                tv.selectTrack(androidx.media3.common.C.TRACK_TYPE_TEXT, t); tick++
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("Retour pour fermer", color = TextDim, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun TrackRow(label: String, selected: Boolean, requester: FocusRequester?, onClick: () -> Unit) {
+    FocusBox(
+        onClick = onClick,
+        focusRequester = requester,
+        background = if (selected) AccentDim else Color.Transparent,
+        modifier = Modifier.fillMaxWidth().height(46.dp),
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (selected) "●" else "○", color = if (selected) Accent else TextDim, fontSize = 14.sp)
+            Spacer(Modifier.width(12.dp))
+            Text(label, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }

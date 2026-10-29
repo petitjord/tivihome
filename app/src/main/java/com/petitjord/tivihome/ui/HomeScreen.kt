@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -54,8 +55,11 @@ import androidx.compose.ui.unit.sp
 
 private data class Section(val label: String, val icon: ImageVector)
 
-// L'index 0 (TV en direct) est la seule section qui garde l'aperçu vidéo actif.
+/** Index de « TV en direct » : seule section qui garde l'aperçu vidéo actif. */
+private const val LIVE = 1
+
 private val sections = listOf(
+    Section("Accueil", Icons.Filled.Home),
     Section("TV en direct", Icons.Filled.PlayArrow),
     Section("Recherche", Icons.Filled.Search),
     Section("Guide TV", Icons.Filled.DateRange),
@@ -76,7 +80,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 
     // Seule la section « TV en direct » garde l'aperçu vidéo en marche.
     LaunchedEffect(selected) {
-        if (selected != 0 && !tv.fullscreen) tv.stop()
+        if (selected != LIVE && !tv.fullscreen) tv.stop()
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -88,13 +92,14 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                 label = "section",
             ) { s ->
                 when (s) {
-                    0 -> LiveSection(nav, focusContent)
-                    1 -> SearchSection(nav)
-                    2 -> GuideSection(nav, focusContent)
-                    3 -> ReplaySection(nav, focusContent)
-                    4 -> MoviesSection(nav, focusContent)
-                    5 -> SeriesSection(nav, focusContent)
-                    6 -> FavoritesSection(nav, focusContent)
+                    0 -> HomeSection(nav, focusContent)
+                    1 -> LiveSection(nav, focusContent)
+                    2 -> SearchSection(nav)
+                    3 -> GuideSection(nav, focusContent)
+                    4 -> ReplaySection(nav, focusContent)
+                    5 -> MoviesSection(nav, focusContent)
+                    6 -> SeriesSection(nav, focusContent)
+                    7 -> FavoritesSection(nav, focusContent)
                     else -> SettingsSection(nav)
                 }
             }

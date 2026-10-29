@@ -74,7 +74,7 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
         ) { m, requester, onFocus ->
             Poster(
                 title = m.name, image = m.poster, favorite = m.favKey in favs,
-                onClick = { nav.playVod(movieItem(m)) },
+                onClick = { nav.openMovie(m) },
                 onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                 onFocus = onFocus, focusRequester = requester,
             )
@@ -135,9 +135,9 @@ private fun <T> CatalogGrid(
     var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
     var focusedIdx by rememberSaveable { mutableIntStateOf(0) }
     val favs = AppRepo.favorites
-    val list = remember(catId, items, favs, resumeKeys) {
+    val list = remember(catId, items, favs, resumeKeys, AppRepo.hiddenGroups) {
         when (catId) {
-            ALL -> items
+            ALL -> items.filter { categoryOf(it) !in AppRepo.hiddenGroups }
             FAV -> items.filter(isFav)
             RESUME -> items.filter(inProgress)
             else -> items.filter { categoryOf(it) == catId }
@@ -209,6 +209,9 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
     val data = rememberLoad("info-${series.seriesId}") { AppRepo.seriesInfo(series.seriesId) }
     val ctx = LocalContext.current
 
+    val backdrop = (data.state as? Load.Ok<com.petitjord.tivihome.data.SeriesInfo>)?.data?.backdrop ?: series.cover
+    Box(Modifier.fillMaxSize()) {
+    Backdrop(backdrop)
     Row(Modifier.fillMaxSize().padding(28.dp)) {
         Column(Modifier.width(300.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(10.dp)).background(Panel2)) {
@@ -217,6 +220,16 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
                 }
             }
             Text(series.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+            series.rating?.takeIf { it != "0" }?.let { Text("★ $it", color = Gold, fontSize = 14.sp) }
+            (data.state as? Load.Ok<com.petitjord.tivihome.data.SeriesInfo>)?.data?.trailer?.let { t ->
+                FocusBox(
+                    onClick = { openTrailer(ctx, t) },
+                    background = Panel,
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("▶ Bande-annonce", color = Color.White) }
+                }
+            }
             val fav = series.favKey in AppRepo.favorites
             FocusBox(
                 onClick = { toggleFav(ctx, series.favKey, series.name) },
@@ -232,6 +245,11 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
         Column(Modifier.weight(1f).fillMaxHeight()) {
             LoadView(data) { info ->
                 val plot = info.plot ?: series.plot
+                val meta = listOfNotNull(info.genre, info.cast?.let { "Avec $it" }).joinToString("  ·  ")
+                if (meta.isNotBlank()) {
+                    Text(meta, color = Accent, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(6.dp))
+                }
                 val seasons = remember(info) { info.episodes.map { it.season }.distinct().sorted() }
                 var season by rememberSaveable { mutableIntStateOf(seasons.firstOrNull() ?: 0) }
                 val episodes = remember(info, season) { info.episodes.filter { it.season == season } }
@@ -272,7 +290,11 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
                     ) {
                         itemsIndexed(episodes) { i, e ->
                             FocusBox(
-                                onClick = { nav.playVod(episodeItem(series, e)) },
+                                onClick = {
+                                    // Toute la série dans l'ordre : l'épisode suivant s'enchaîne tout seul.
+                                    val queue = info.episodes.map { episodeItem(series, it) }
+                                    nav.playQueue(queue, info.episodes.indexOf(e).coerceAtLeast(0))
+                                },
                                 focusRequester = if (i == 0) restore else null,
                                 modifier = Modifier.fillMaxWidth().height(64.dp),
                             ) {
@@ -292,4 +314,5 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
             }
         }
     }
+}
 }

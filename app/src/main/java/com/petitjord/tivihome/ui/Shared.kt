@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -64,17 +65,27 @@ fun CategoryColumn(
     modifier: Modifier = Modifier,
 ) {
     val state = rememberLazyListState()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val hidden = AppRepo.hiddenGroups
+    val visible = remember(groups, hidden) { groups.filter { it.id !in hidden } }
     LazyColumn(
         state = state,
         modifier = modifier.width(200.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        itemsIndexed(groups) { _, g ->
+        itemsIndexed(visible) { _, g ->
             val sel = g.id == selectedId
             FocusBox(
                 onClick = { onSelect(g.id) },
                 onFocus = { onSelect(g.id) },
+                onLongClick = if (g.id.startsWith("__")) null else {
+                    {
+                        AppRepo.toggleHiddenGroup(g.id)
+                        Toast.makeText(ctx, "« ${g.name} » masqué. Réaffichage dans Paramètres.", Toast.LENGTH_LONG).show()
+                        onSelect(ALL)
+                    }
+                },
                 background = if (sel) AccentDim else Color.Transparent,
                 modifier = Modifier.fillMaxWidth().height(42.dp),
             ) { focused ->

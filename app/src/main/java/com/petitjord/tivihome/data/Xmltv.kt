@@ -28,6 +28,20 @@ class XmltvGuide(
 ) {
     val channelCount get() = byId.size
 
+    /** Recherche dans tout le guide : (id XMLTV, programme) à venir ou en cours. */
+    fun search(match: (String) -> Boolean, limit: Int = 40): List<Pair<String, Programme>> {
+        val now = System.currentTimeMillis()
+        val out = mutableListOf<Pair<String, Programme>>()
+        for ((id, list) in byId) {
+            for (p in list) if (p.end > now && match(p.title)) out += id to p
+        }
+        return out.sortedBy { it.second.start }.take(limit)
+    }
+
+    /** Retrouve la chaîne correspondant à un id XMLTV. */
+    fun channelFor(id: String, channels: List<Channel>): Channel? =
+        channels.firstOrNull { it.epgId == id } ?: channels.firstOrNull { byName[normalizeName(it.name)] == id }
+
     fun programmesFor(ch: Channel): List<Programme>? {
         ch.epgId?.let { id -> byId[id]?.let { return it } }
         val id = byName[normalizeName(ch.name)] ?: return null

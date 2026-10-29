@@ -3,15 +3,46 @@ package com.petitjord.tivihome.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
-val Bg = Color(0xFF0B0E13)
-val Panel = Color(0xFF141922)
-val Panel2 = Color(0xFF1C2330)
-val Accent = Color(0xFF3DB2FF)
-val AccentDim = Color(0xFF1B4A6B)
+/** Couleurs d'accent proposées dans les réglages. */
+val AccentChoices = listOf(
+    "Bleu" to Color(0xFF3DB2FF),
+    "Violet" to Color(0xFF9B7BFF),
+    "Vert" to Color(0xFF3DDC97),
+    "Orange" to Color(0xFFFF9F43),
+    "Rose" to Color(0xFFFF5C8A),
+    "Rouge" to Color(0xFFFF5252),
+)
+
+/** Thème vivant : changer une valeur redessine toute l'appli. */
+object AppTheme {
+    var accentIndex by mutableStateOf(0)
+    /** Noir pur pour les écrans OLED. */
+    var oled by mutableStateOf(false)
+}
+
+val Accent: Color get() = AccentChoices[AppTheme.accentIndex.coerceIn(0, AccentChoices.lastIndex)].second
+val AccentDim: Color get() = Accent.copy(alpha = 0.32f).compositeOn(if (AppTheme.oled) Color.Black else Color(0xFF141922))
+val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF0B0E13)
+val Panel: Color get() = if (AppTheme.oled) Color(0xFF0A0A0A) else Color(0xFF141922)
+val Panel2: Color get() = if (AppTheme.oled) Color(0xFF161616) else Color(0xFF1C2330)
 val TextDim = Color(0xFF8A94A6)
 val Gold = Color(0xFFFFC94D)
+
+/** Mélange une couleur semi-transparente sur un fond opaque. */
+private fun Color.compositeOn(bg: Color): Color {
+    val a = alpha
+    return Color(
+        red = red * a + bg.red * (1 - a),
+        green = green * a + bg.green * (1 - a),
+        blue = blue * a + bg.blue * (1 - a),
+        alpha = 1f,
+    )
+}
 
 @Composable
 fun TiviTheme(content: @Composable () -> Unit) {

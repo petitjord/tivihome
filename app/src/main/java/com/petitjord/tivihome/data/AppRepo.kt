@@ -35,6 +35,24 @@ object AppRepo {
     var xmltvStatus by mutableStateOf("Aucun guide externe")
         private set
     private var xmltv: XmltvGuide? = null
+    val xmltvGuide: XmltvGuide? get() = xmltv
+
+    // ---------- Réglages ----------
+    /** Ouvrir directement la dernière chaîne au lancement. */
+    var startOnLastChannel by mutableStateOf(false)
+        private set
+    /** Taille des sous-titres : 0 petit, 1 normal, 2 grand. */
+    var subtitleSize by mutableStateOf(1)
+        private set
+    /** Groupes masqués (identifiants de catégorie). */
+    var hiddenGroups by mutableStateOf<Set<String>>(emptySet())
+        private set
+    /** Rappels d'émissions à venir. */
+    var reminders by mutableStateOf<List<Reminder>>(emptyList())
+        private set
+    /** Comptes enregistrés (le compte actif est client). */
+    var accounts by mutableStateOf<List<Account>>(emptyList())
+        private set
 
     private var liveCats: List<Category>? = null
     private var live: List<Channel>? = null
@@ -44,6 +62,7 @@ object AppRepo {
     private var series: List<Series>? = null
     private var serverTz: String? = null
     private val seriesInfos = ConcurrentHashMap<Int, SeriesInfo>()
+    private val vodInfos = ConcurrentHashMap<Int, MovieInfo>()
     /** streamId -> (heure de chargement, (limite demandée, programmes)) */
     private val epg = ConcurrentHashMap<Int, Pair<Long, Pair<Int, List<Programme>>>>()
     private val archive = ConcurrentHashMap<Int, Pair<Long, List<Programme>>>()
@@ -56,6 +75,13 @@ object AppRepo {
         liveFormat = prefs.getString("liveFormat", "ts") ?: "ts"
         xmltvUrl = prefs.getString("xmltvUrl", "") ?: ""
         resume = readResume()
+        startOnLastChannel = prefs.getBoolean("startLast", false)
+        subtitleSize = prefs.getInt("subSize", 1)
+        hiddenGroups = prefs.getStringSet("hiddenGroups", emptySet())!!.toSet()
+        reminders = readReminders()
+        accounts = readAccounts()
+        com.petitjord.tivihome.ui.AppTheme.accentIndex = prefs.getInt("accent", 0)
+        com.petitjord.tivihome.ui.AppTheme.oled = prefs.getBoolean("oled", false)
         val server = prefs.getString("server", null)
         val user = prefs.getString("user", null)
         val pass = prefs.getString("pass", null)
@@ -72,9 +98,105 @@ object AppRepo {
             .putString("user", account.username)
             .putString("pass", account.password)
             .apply()
+        val acc = Account(c.base, account.username, account.password)
+        if (accounts.none { it.server == acc.server && it.username == acc.username }) {
+            accounts = accounts + acc
+            writeAccounts()
+        }
         clearCache()
         client = c
         return true
+    }
+
+    /** Bascule sur un autre compte enregistré. */
+    fun switchAccount(acc: Account) {
+        prefs.edit().putString("server", acc.server).putString("user", acc.username).putString("pass", acc.password).apply()
+        clearCache()
+        client = XtreamClient(acc)
+    }
+
+    fun removeAccount(acc: Account) {
+        accounts = accounts.filterNot { it.server == acc.server && it.username == acc.username }
+        writeAccounts()
+    }
+
+    private fun readAccounts(): List<Account> = try {
+        val arr = JSONArray(prefs.getString("accounts", "[]"))
+        val list = (0 until arr.length()).mapNotNull { i ->
+            arr.optJSONObject(i)?.let { Account(it.getString("s"), it.getString("u"), it.getString("p")) }
+        }
+        // Le compte actif des versions précédentes est repris automatiquement.
+        val s = prefs.getString("server", null); val u = prefs.getString("user", null); val p = prefs.getString("pass", null)
+        if (s != null && u != null && p != null && list.none { it.server == s && it.username == u }) list + Account(s, u, p) else list
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    private fun writeAccounts() {
+        val arr = JSONArray()
+        accounts.forEach { arr.put(JSONObject().put("s", it.server).put("u", it.username).put("p", it.password)) }
+        prefs.edit().putString("accounts", arr.toString()).apply()
+    }
+
+    // ---------- Réglages ----------
+
+    fun setAccent(i: Int) { com.petitjord.tivihome.ui.AppTheme.accentIndex = i; prefs.edit().putInt("accent", i).apply() }
+    fun setOled(on: Boolean) { com.petitjord.tivihome.ui.AppTheme.oled = on; prefs.edit().putBoolean("oled", on).apply() }
+    fun setStartLast(on: Boolean) { startOnLastChannel = on; prefs.edit().putBoolean("startLast", on).apply() }
+    fun setSubSize(v: Int) { subtitleSize = v; prefs.edit().putInt("subSize", v).apply() }
+
+    /** Dernière chaîne regardée et celle d'avant (pour la touche « précédente »). */
+    val lastChannelId: Int get() = prefs.getInt("lastCh", -1)
+    fun rememberChannel(id: Int) {
+        val last = prefs.getInt("lastCh", -1)
+        if (last == id) return
+        prefs.edit().putInt("prevCh", last).putInt("lastCh", id).apply()
+    }
+    val previousChannelId: Int get() = prefs.getInt("prevCh", -1)
+
+    fun toggleHiddenGroup(id: String): Boolean {
+        val hide = id !in hiddenGroups
+        hiddenGroups = if (hide) hiddenGroups + id else hiddenGroups - id
+        prefs.edit().putStringSet("hiddenGroups", hiddenGroups).apply()
+        return hide
+    }
+
+    fun showAllGroups() {
+        hiddenGroups = emptySet()
+        prefs.edit().putStringSet("hiddenGroups", hiddenGroups).apply()
+    }
+
+    // ---------- Rappels ----------
+
+    fun hasReminder(ch: Channel, p: Programme) = reminders.any { it.streamId == ch.streamId && it.start == p.start }
+
+    fun toggleReminder(ch: Channel, p: Programme): Boolean {
+        val exists = hasReminder(ch, p)
+        reminders = if (exists) reminders.filterNot { it.streamId == ch.streamId && it.start == p.start }
+        else reminders + Reminder(ch.streamId, ch.name, p.title, p.start)
+        writeReminders()
+        return !exists
+    }
+
+    fun dropReminder(r: Reminder) {
+        reminders = reminders - r
+        writeReminders()
+    }
+
+    private fun readReminders(): List<Reminder> = try {
+        val arr = JSONArray(prefs.getString("reminders", "[]"))
+        val now = System.currentTimeMillis()
+        (0 until arr.length()).mapNotNull { i ->
+            arr.optJSONObject(i)?.let { Reminder(it.getInt("id"), it.optString("ch"), it.optString("t"), it.getLong("s")) }
+        }.filter { it.start > now - 10 * 60_000 }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    private fun writeReminders() {
+        val arr = JSONArray()
+        reminders.forEach { arr.put(JSONObject().put("id", it.streamId).put("ch", it.channelName).put("t", it.title).put("s", it.start)) }
+        prefs.edit().putString("reminders", arr.toString()).apply()
     }
 
     fun logout() {
@@ -86,7 +208,7 @@ object AppRepo {
     fun clearCache() {
         liveCats = null; live = null; vodCats = null; vod = null
         seriesCats = null; series = null; serverTz = null
-        seriesInfos.clear(); epg.clear(); archive.clear()
+        seriesInfos.clear(); vodInfos.clear(); epg.clear(); archive.clear()
     }
 
     fun setFormat(format: String) {
@@ -112,6 +234,7 @@ object AppRepo {
     suspend fun vodStreams() = vod ?: c().vodStreams().also { vod = it }
     suspend fun seriesCategories() = seriesCats ?: c().seriesCategories().also { seriesCats = it }
     suspend fun seriesList() = series ?: c().seriesList().also { series = it }
+    suspend fun vodInfo(m: Movie) = vodInfos[m.streamId] ?: c().vodInfo(m.streamId).also { vodInfos[m.streamId] = it }
     suspend fun seriesInfo(id: Int) = seriesInfos[id] ?: c().seriesInfo(id).also { seriesInfos[id] = it }
     suspend fun accountInfo() = c().accountInfo().also { serverTz = it.timezone }
 

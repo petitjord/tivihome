@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -54,6 +57,54 @@ fun SettingsSection(nav: Nav) {
             is Load.Err -> Line("Statut", "indisponible")
         }
 
+        Title("Comptes")
+        AppRepo.accounts.forEach { acc ->
+            val active = client != null && acc.server == client.base && acc.username == client.account.username
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    (if (active) "● " else "○ ") + "${acc.username} — ${acc.server.removePrefix("http://").removePrefix("https://")}",
+                    color = if (active) Accent else Color.White, fontSize = 14.sp, modifier = Modifier.width(380.dp), maxLines = 1,
+                )
+                if (!active) {
+                    Choice("Utiliser", false) { nav.switchAccount(acc) }
+                    Choice("Supprimer", false) { AppRepo.removeAccount(acc) }
+                }
+            }
+        }
+        Choice("+ Ajouter un compte", false) { nav.logout() }
+
+        Title("Apparence")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            AccentChoices.forEachIndexed { i, (name, color) ->
+                Choice(name, AppTheme.accentIndex == i, dot = color) { AppRepo.setAccent(i) }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Choice("Fond bleu nuit", !AppTheme.oled) { AppRepo.setOled(false) }
+            Choice("Noir pur (OLED)", AppTheme.oled) { AppRepo.setOled(true) }
+        }
+
+        Title("Démarrage")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Choice("Ouvrir l'accueil", !AppRepo.startOnLastChannel) { AppRepo.setStartLast(false) }
+            Choice("Ouvrir la dernière chaîne", AppRepo.startOnLastChannel) { AppRepo.setStartLast(true) }
+        }
+
+        Title("Sous-titres")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf("Petits", "Normaux", "Grands").forEachIndexed { i, l ->
+                Choice(l, AppRepo.subtitleSize == i) { AppRepo.setSubSize(i) }
+            }
+        }
+
+        Title("Groupes masqués")
+        if (AppRepo.hiddenGroups.isEmpty()) {
+            Text("Aucun. Maintiens OK sur un groupe de chaînes, de films ou de séries pour le masquer.", color = TextDim, fontSize = 13.sp)
+        } else {
+            Text("${AppRepo.hiddenGroups.size} groupe(s) masqué(s).", color = Color.White, fontSize = 14.sp)
+            Choice("Tout réafficher", false) { AppRepo.showAllGroups() }
+        }
+
         Title("Lecture de la TV en direct")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Choice("MPEG-TS (.ts)", AppRepo.liveFormat == "ts") { AppRepo.setFormat("ts") }
@@ -96,13 +147,17 @@ private fun Line(label: String, value: String) {
 }
 
 @Composable
-private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun Choice(label: String, selected: Boolean, dot: Color? = null, onClick: () -> Unit) {
     FocusBox(
         onClick = onClick,
         background = if (selected) AccentDim else Panel,
         modifier = Modifier.height(46.dp),
     ) {
-        Box(Modifier.padding(horizontal = 20.dp).height(46.dp), contentAlignment = Alignment.Center) {
+        Row(Modifier.padding(horizontal = 18.dp).height(46.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (dot != null) {
+                Box(Modifier.size(14.dp).background(dot, androidx.compose.foundation.shape.CircleShape))
+                Spacer(Modifier.width(8.dp))
+            }
             Text(label, color = Color.White, fontSize = 15.sp)
         }
     }

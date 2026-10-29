@@ -24,6 +24,8 @@ data class Movie(
     val categoryId: String,
     val ext: String,
     val rating: String?,
+    /** Date d'ajout chez le fournisseur (secondes), pour « ajouts récents ». */
+    val added: Long = 0,
 ) {
     val favKey get() = "movie:$streamId"
 }
@@ -34,6 +36,8 @@ data class Series(
     val cover: String?,
     val categoryId: String,
     val plot: String?,
+    val added: Long = 0,
+    val rating: String? = null,
 ) {
     val favKey get() = "series:$seriesId"
 }
@@ -48,7 +52,30 @@ data class Episode(
     val image: String?,
 )
 
-data class SeriesInfo(val plot: String?, val episodes: List<Episode>)
+data class SeriesInfo(
+    val plot: String?,
+    val episodes: List<Episode>,
+    val cast: String? = null,
+    val genre: String? = null,
+    val backdrop: String? = null,
+    val trailer: String? = null,
+)
+
+/** Fiche détaillée d'un film. */
+data class MovieInfo(
+    val plot: String?,
+    val cast: String?,
+    val director: String?,
+    val genre: String?,
+    val year: String?,
+    val durationText: String?,
+    val rating: String?,
+    val backdrop: String?,
+    val trailer: String?,
+)
+
+/** Rappel d'émission. */
+data class Reminder(val streamId: Int, val channelName: String, val title: String, val start: Long)
 
 /** start / end en millisecondes. */
 data class Programme(
