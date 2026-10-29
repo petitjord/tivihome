@@ -66,6 +66,7 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
             items = movies,
             categoryOf = { it.categoryId },
             isFav = { it.favKey in favs },
+            inProgress = { m -> AppRepo.resume.any { it.key == m.favKey } },
             focusContent = focusContent,
             unit = "films",
             titleOf = { it.name },
@@ -73,7 +74,7 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
         ) { m, requester, onFocus ->
             Poster(
                 title = m.name, image = m.poster, favorite = m.favKey in favs,
-                onClick = { nav.playVod(m.name, AppRepo.movieUrl(m)) },
+                onClick = { nav.playVod(movieItem(m)) },
                 onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                 onFocus = onFocus, focusRequester = requester,
             )
@@ -94,6 +95,7 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
             items = list,
             categoryOf = { it.categoryId },
             isFav = { it.favKey in favs },
+            inProgress = { false },
             focusContent = focusContent,
             unit = "séries",
             titleOf = { it.name },
@@ -117,20 +119,27 @@ private fun <T> CatalogGrid(
     items: List<T>,
     categoryOf: (T) -> String,
     isFav: (T) -> Boolean,
+    inProgress: (T) -> Boolean,
     focusContent: Boolean,
     unit: String,
     titleOf: (T) -> String,
     imageOf: (T) -> String?,
     cell: @Composable (T, androidx.compose.ui.focus.FocusRequester?, () -> Unit) -> Unit,
 ) {
-    val groups = remember(cats) { listOf(Category(FAV, "★ Favoris"), Category(ALL, "Tout")) + cats }
+    val resumeKeys = AppRepo.resume
+    val hasResume = remember(items, resumeKeys) { items.any(inProgress) }
+    val groups = remember(cats, hasResume) {
+        (if (hasResume) listOf(Category(RESUME, "▶ En cours")) else emptyList()) +
+            listOf(Category(FAV, "★ Favoris"), Category(ALL, "Tout")) + cats
+    }
     var catId by rememberSaveable { mutableStateOf(cats.firstOrNull()?.id ?: ALL) }
     var focusedIdx by rememberSaveable { mutableIntStateOf(0) }
     val favs = AppRepo.favorites
-    val list = remember(catId, items, favs) {
+    val list = remember(catId, items, favs, resumeKeys) {
         when (catId) {
             ALL -> items
             FAV -> items.filter(isFav)
+            RESUME -> items.filter(inProgress)
             else -> items.filter { categoryOf(it) == catId }
         }
     }
@@ -263,7 +272,7 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
                     ) {
                         itemsIndexed(episodes) { i, e ->
                             FocusBox(
-                                onClick = { nav.playVod("${series.name} — ${e.title}", AppRepo.episodeUrl(e)) },
+                                onClick = { nav.playVod(episodeItem(series, e)) },
                                 focusRequester = if (i == 0) restore else null,
                                 modifier = Modifier.fillMaxWidth().height(64.dp),
                             ) {

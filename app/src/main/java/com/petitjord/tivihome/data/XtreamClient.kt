@@ -75,12 +75,33 @@ class XtreamClient(val account: Account) {
     }
 
     suspend fun accountInfo(): AccountInfo {
-        val ui = obj(api(null)).optJSONObject("user_info") ?: return AccountInfo(null, null, null)
+        val root = obj(api(null))
+        val ui = root.optJSONObject("user_info")
         return AccountInfo(
-            status = ui.s("status"),
-            expiry = ui.s("exp_date")?.toLongOrNull()?.times(1000),
-            maxConnections = ui.s("max_connections"),
+            status = ui?.s("status"),
+            expiry = ui?.s("exp_date")?.toLongOrNull()?.times(1000),
+            maxConnections = ui?.s("max_connections"),
+            timezone = root.optJSONObject("server_info")?.s("timezone"),
         )
+    }
+
+    /** Guide complet d'une chaîne, programmes passés compris (pour le replay). */
+    suspend fun archiveEpg(streamId: Int): List<Programme> {
+        val body = api("get_simple_data_table", mapOf("stream_id" to "$streamId"))
+        val listings = try {
+            JSONObject(body).optJSONArray("epg_listings")
+        } catch (e: JSONException) {
+            null
+        } ?: return emptyList()
+        return listings.mapObj { o ->
+            Programme(
+                title = b64(o.optString("title")),
+                description = b64(o.optString("description")),
+                start = o.optString("start_timestamp").toLongOrNull()?.times(1000) ?: 0L,
+                end = o.optString("stop_timestamp").toLongOrNull()?.times(1000) ?: 0L,
+                hasArchive = o.optString("has_archive") == "1",
+            )
+        }.filter { it.start > 0 && it.end > it.start }.distinctBy { it.start }.sortedBy { it.start }
     }
 
     // ---------- TV en direct ----------
@@ -95,6 +116,9 @@ class XtreamClient(val account: Account) {
             icon = o.s("stream_icon"),
             categoryId = o.optString("category_id"),
             epgId = o.s("epg_channel_id"),
+            archiveDays = if (o.optString("tv_archive") == "1") {
+                o.optString("tv_archive_duration").toIntOrNull()?.coerceAtLeast(1) ?: 1
+            } else 0,
         )
     }
 
@@ -182,6 +206,14 @@ class XtreamClient(val account: Account) {
 
     fun liveUrl(streamId: Int, format: String) =
         "$base/live/${account.username}/${account.password}/$streamId.$format"
+
+    /** URL de replay : début exprimé dans le fuseau horaire du serveur. */
+    fun timeshiftUrl(streamId: Int, startMs: Long, durationMin: Int, timezone: String?): String {
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd:HH-mm", java.util.Locale.US)
+        fmt.timeZone = timezone?.let { java.util.TimeZone.getTimeZone(it) } ?: java.util.TimeZone.getDefault()
+        val start = fmt.format(java.util.Date(startMs))
+        return "$base/timeshift/${account.username}/${account.password}/$durationMin/$start/$streamId.ts"
+    }
 
     fun movieUrl(m: Movie) =
         "$base/movie/${account.username}/${account.password}/${m.streamId}.${m.ext}"

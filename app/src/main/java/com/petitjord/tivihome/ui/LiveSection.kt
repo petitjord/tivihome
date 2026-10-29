@@ -151,7 +151,7 @@ fun ChannelRow(
 ) {
     val epg = rememberLoad("row-${ch.streamId}") {
         delay(180) // pas de requête pendant un défilement rapide
-        AppRepo.shortEpg(ch.streamId, 4)
+        AppRepo.shortEpg(ch, 4)
     }
     val now = System.currentTimeMillis()
     val current: Programme? = when (val s = epg.state) {
@@ -236,7 +236,7 @@ private fun PreviewPanel(ch: Channel?, modifier: Modifier) {
 
 @Composable
 private fun ProgrammeInfo(ch: Channel) {
-    val epg = rememberLoad("row-${ch.streamId}") { AppRepo.shortEpg(ch.streamId, 4) }
+    val epg = rememberLoad("row-${ch.streamId}") { AppRepo.shortEpg(ch, 4) }
     when (val s = epg.state) {
         is Load.Loading -> Text("Chargement du programme…", color = TextDim, fontSize = 13.sp)
         is Load.Err -> Text("Programme indisponible", color = TextDim, fontSize = 13.sp)

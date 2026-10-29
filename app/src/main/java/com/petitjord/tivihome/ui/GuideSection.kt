@@ -185,7 +185,7 @@ private fun GuideRow(
     onPlay: () -> Unit,
 ) {
     val windowEnd = windowStart + WINDOW_MIN * 60_000L
-    val epg = rememberLoad("epg-${ch.streamId}") { AppRepo.shortEpg(ch.streamId, 24) }
+    val epg = rememberLoad("epg-${ch.streamId}") { AppRepo.shortEpg(ch, 24) }
 
     Row(Modifier.fillMaxWidth().height(ROW_HEIGHT).padding(vertical = 1.dp)) {
         Row(

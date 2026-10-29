@@ -43,6 +43,7 @@ import java.util.Locale
 
 const val ALL = "__all__"
 const val FAV = "__fav__"
+const val RESUME = "__resume__"
 
 private val hmFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
 fun hm(ms: Long): String = synchronized(hmFormat) { hmFormat.format(Date(ms)) }
@@ -157,6 +158,54 @@ fun SectionHeader(text: String, sub: String? = null) {
         if (sub != null) {
             Spacer(Modifier.width(10.dp))
             Text(sub, color = TextDim, fontSize = 14.sp)
+        }
+    }
+}
+
+fun movieItem(m: com.petitjord.tivihome.data.Movie) = com.petitjord.tivihome.data.VodItem(
+    key = m.favKey, title = m.name, url = AppRepo.movieUrl(m), image = m.poster,
+)
+
+fun episodeItem(s: com.petitjord.tivihome.data.Series, e: com.petitjord.tivihome.data.Episode) =
+    com.petitjord.tivihome.data.VodItem(
+        key = "episode:${e.id}",
+        title = "${s.name} · S${e.season}E${e.episodeNum} ${e.title}".trim(),
+        url = AppRepo.episodeUrl(e),
+        image = e.image ?: s.cover,
+    )
+
+/** Carte « Continuer à regarder » : image, titre et avancement. */
+@Composable
+fun ResumeCard(
+    entry: com.petitjord.tivihome.data.ResumeEntry,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
+) {
+    FocusBox(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        focusRequester = focusRequester,
+        background = Panel2,
+        scaleOnFocus = 1.05f,
+        modifier = Modifier.width(250.dp).height(150.dp),
+    ) { focused ->
+        if (entry.image != null) {
+            AsyncImage(
+                model = entry.image, contentDescription = null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+            )
+        }
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xEE000000))))
+                .padding(start = 10.dp, end = 10.dp, top = 28.dp, bottom = 8.dp),
+        ) {
+            Text(entry.title, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(3.dp).background(Color(0x33FFFFFF))) {
+                Box(Modifier.fillMaxWidth(entry.progress).height(3.dp).background(if (focused) Accent else Color(0xFFE0E6EE)))
+            }
         }
     }
 }

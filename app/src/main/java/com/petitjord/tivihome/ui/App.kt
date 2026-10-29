@@ -23,18 +23,19 @@ import androidx.compose.ui.platform.LocalContext
 import com.petitjord.tivihome.data.AppRepo
 import com.petitjord.tivihome.data.Channel
 import com.petitjord.tivihome.data.Series
+import com.petitjord.tivihome.data.VodItem
 
 sealed interface Screen {
     data object Home : Screen
     data object LiveFull : Screen
-    data class Vod(val title: String, val url: String) : Screen
+    data class Vod(val item: VodItem) : Screen
     data class SeriesDetail(val series: Series) : Screen
 }
 
 /** Actions de navigation partagées par tous les écrans. */
 class Nav(
     val playLive: (list: List<Channel>, index: Int) -> Unit,
-    val playVod: (title: String, url: String) -> Unit,
+    val playVod: (VodItem) -> Unit,
     val openSeries: (Series) -> Unit,
     val back: () -> Unit,
     val logout: () -> Unit,
@@ -71,9 +72,9 @@ private fun MainNavigation(onLogout: () -> Unit) {
                 tv.fullscreen = true
                 stack.add(Screen.LiveFull)
             },
-            playVod = { title, url ->
+            playVod = { item ->
                 tv.fullscreen = true
-                stack.add(Screen.Vod(title, url))
+                stack.add(Screen.Vod(item))
             },
             openSeries = { stack.add(Screen.SeriesDetail(it)) },
             back = {
@@ -94,6 +95,9 @@ private fun MainNavigation(onLogout: () -> Unit) {
 
     BackHandler(enabled = stack.size > 1) { nav.back() }
 
+    // Guide XMLTV externe : chargé en arrière-plan au démarrage
+    androidx.compose.runtime.LaunchedEffect(Unit) { AppRepo.loadXmltv() }
+
     CompositionLocalProvider(LocalTvPlayer provides tv) {
         AnimatedContent(
             targetState = stack.last(),
@@ -108,7 +112,7 @@ private fun MainNavigation(onLogout: () -> Unit) {
                     SeriesDetailScreen(series = top.series, nav = nav)
                 }
                 is Screen.LiveFull -> LiveFullScreen(nav)
-                is Screen.Vod -> VodScreen(top.title, top.url)
+                is Screen.Vod -> VodScreen(top.item)
             }
         }
     }

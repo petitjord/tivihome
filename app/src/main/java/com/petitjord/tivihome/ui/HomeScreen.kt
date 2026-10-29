@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -52,9 +54,12 @@ import androidx.compose.ui.unit.sp
 
 private data class Section(val label: String, val icon: ImageVector)
 
+// L'index 0 (TV en direct) est la seule section qui garde l'aperçu vidéo actif.
 private val sections = listOf(
     Section("TV en direct", Icons.Filled.PlayArrow),
+    Section("Recherche", Icons.Filled.Search),
     Section("Guide TV", Icons.Filled.DateRange),
+    Section("Replay", Icons.Filled.Refresh),
     Section("Films", Icons.Filled.Star),
     Section("Séries", Icons.Filled.List),
     Section("Favoris", Icons.Filled.Favorite),
@@ -84,10 +89,12 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
             ) { s ->
                 when (s) {
                     0 -> LiveSection(nav, focusContent)
-                    1 -> GuideSection(nav, focusContent)
-                    2 -> MoviesSection(nav, focusContent)
-                    3 -> SeriesSection(nav, focusContent)
-                    4 -> FavoritesSection(nav, focusContent)
+                    1 -> SearchSection(nav)
+                    2 -> GuideSection(nav, focusContent)
+                    3 -> ReplaySection(nav, focusContent)
+                    4 -> MoviesSection(nav, focusContent)
+                    5 -> SeriesSection(nav, focusContent)
+                    6 -> FavoritesSection(nav, focusContent)
                     else -> SettingsSection(nav)
                 }
             }

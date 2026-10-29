@@ -99,11 +99,11 @@ class TvPlayer(ctx: Context) {
         playChannel(list[(i + delta + list.size) % list.size], list)
     }
 
-    fun playUrl(url: String) {
+    fun playUrl(url: String, startMs: Long = 0L) {
         channel = null
         channels = emptyList()
         fallbackTried = true
-        start(url)
+        start(url, startMs)
     }
 
     fun stop() {
@@ -116,10 +116,10 @@ class TvPlayer(ctx: Context) {
 
     fun release() = exo.release()
 
-    private fun start(url: String) {
+    private fun start(url: String, startMs: Long = 0L) {
         error = null
         buffering = true
-        exo.setMediaItem(MediaItem.fromUri(url))
+        exo.setMediaItem(MediaItem.fromUri(url), startMs.coerceAtLeast(0L))
         exo.prepare()
         exo.play()
     }

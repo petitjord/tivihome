@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.petitjord.tivihome.data.AppRepo
 import com.petitjord.tivihome.data.Channel
+import com.petitjord.tivihome.data.VodItem
 import kotlinx.coroutines.delay
 
 /**
@@ -195,7 +196,7 @@ private fun ChannelOverlay(onPick: (List<Channel>, Int) -> Unit, onFav: (Channel
 
 @Composable
 private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
-    val epg = rememberLoad("row-${ch.streamId}") { AppRepo.shortEpg(ch.streamId, 4) }
+    val epg = rememberLoad("row-${ch.streamId}") { AppRepo.shortEpg(ch, 4) }
     val progs = when (val s = epg.state) {
         is Load.Ok -> s.data
         else -> emptyList()
@@ -250,12 +251,29 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
     }
 }
 
-/** Film ou épisode en plein écran, avec les commandes de lecture. */
+/** Film, épisode ou replay en plein écran, avec commandes et reprise automatique. */
 @Composable
-fun VodScreen(title: String, url: String) {
+fun VodScreen(item: VodItem) {
     val tv = LocalTvPlayer.current
-    LaunchedEffect(url) { tv.playUrl(url) }
-    DisposableEffect(Unit) { onDispose { tv.stop() } }
+    val ctx = LocalContext.current
+    LaunchedEffect(item.url) {
+        val start = item.key?.let { AppRepo.resumePosition(it) } ?: 0L
+        tv.playUrl(item.url, start)
+        if (start > 0) {
+            android.widget.Toast.makeText(ctx, "Reprise à ${formatDuration(start)}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        // Mémorise la position toutes les 10 secondes
+        while (true) {
+            delay(10_000)
+            if (tv.exo.isPlaying) AppRepo.saveProgress(item, tv.exo.currentPosition, tv.exo.duration)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            AppRepo.saveProgress(item, tv.exo.currentPosition, tv.exo.duration)
+            tv.stop()
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         VideoSurface(Modifier.fillMaxSize(), withControls = true)
@@ -266,6 +284,12 @@ fun VodScreen(title: String, url: String) {
             ErrorBox("$it\nAppuie sur Retour pour revenir.", Modifier.align(Alignment.Center))
         }
     }
+}
+
+fun formatDuration(ms: Long): String {
+    val total = ms / 1000
+    val h = total / 3600; val m = (total % 3600) / 60; val s = total % 60
+    return if (h > 0) "%d h %02d".format(h, m) else "%d min %02d".format(m, s)
 }
 
 @Composable

@@ -21,6 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import com.petitjord.tivihome.data.AppRepo
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,6 +63,9 @@ fun SettingsSection(nav: Nav) {
             "Si une chaîne ne démarre pas, essaie l'autre format. Tivihome bascule aussi automatiquement en cas d'échec.",
             color = TextDim, fontSize = 13.sp,
         )
+
+        Title("Guide TV externe (XMLTV)")
+        XmltvSettings()
 
         Title("Données")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -99,4 +106,32 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
             Text(label, color = Color.White, fontSize = 15.sp)
         }
     }
+}
+
+@Composable
+private fun XmltvSettings() {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var url by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(AppRepo.xmltvUrl) }
+    Text(
+        "Colle le lien d'un guide au format XMLTV (.xml ou .xml.gz). Il remplace le guide du fournisseur pour les chaînes qu'il connaît. Laisse vide pour garder celui du fournisseur.",
+        color = TextDim, fontSize = 13.sp,
+    )
+    androidx.compose.material3.OutlinedTextField(
+        value = url,
+        onValueChange = { url = it },
+        singleLine = true,
+        placeholder = { Text("https://exemple.com/guide.xml.gz") },
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Choice("Enregistrer et charger", false) {
+            AppRepo.setXmltvUrl(url)
+            scope.launch { AppRepo.loadXmltv(force = true) }
+        }
+        Choice("Retirer", false) {
+            url = ""
+            AppRepo.setXmltvUrl("")
+        }
+    }
+    Text(AppRepo.xmltvStatus, color = Color.White, fontSize = 14.sp)
 }
