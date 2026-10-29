@@ -126,3 +126,37 @@ fun LiveDot(size: Dp = 8.dp, color: Color = Color(0xFFFF4D5E)) {
     )
     Box(Modifier.size(size).clip(RoundedCornerShape(50)).background(color.copy(alpha = a)))
 }
+
+// ---------- Défilement façon décodeur TV ----------
+
+/**
+ * Le focus reste à une position fixe (fraction de la zone visible) et c'est la liste
+ * qui défile dessous : plus d'à-coups quand on parcourt une rangée d'affiches.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun pivotSpec(fraction: Float) = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val target = fraction * containerSize
+        val leading = if (size <= containerSize && containerSize - target < size) containerSize - size else target
+        return offset - leading
+    }
+}
+
+/** Aucun défilement automatique : c'est l'écran qui décide (voir l'accueil). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+val NoAutoScroll = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun ScrollSpec(spec: androidx.compose.foundation.gestures.BringIntoViewSpec, content: @Composable () -> Unit) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
+        content = content,
+    )
+}
+
+/** Rangée horizontale dont l'élément sélectionné reste calé à gauche. */
+@Composable
+fun PivotRow(content: @Composable () -> Unit) = ScrollSpec(pivotSpec(0f), content)

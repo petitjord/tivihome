@@ -75,7 +75,7 @@ fun FocusBox(
     // Focus : léger ressort, halo coloré et bordure en dégradé
     val scale by animateFloatAsState(
         if (focused) scaleOnFocus else 1f,
-        spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow),
+        tween(140),
         label = "scale",
     )
     val bg by animateColorAsState(if (focused) focusedBackground else background, tween(180), label = "bg")

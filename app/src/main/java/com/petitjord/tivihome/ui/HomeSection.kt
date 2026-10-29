@@ -108,37 +108,53 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
                 Text(hm(now), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Light)
             }
     }
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth().weight(1f),
-        contentPadding = PaddingValues(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    // Chaque rangée qui reçoit le focus vient se caler en haut, sous l'en-tête :
+    // le carrousel est toujours affiché en entier et rien ne « saute ».
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var itemIndex = 0
+    fun Modifier.snapOnFocus(index: Int) = this.onFocusChanged {
+        if (it.hasFocus) scope.launch { listState.animateScrollToItem(index) }
+    }
+    val featured = recentMovies.filter { it.added > 0 }.take(6)
+    val upcoming = reminders.filter { it.start > now - 5 * 60_000 }.sortedBy { it.start }
 
+    ScrollSpec(NoAutoScroll) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxWidth().weight(1f),
+        contentPadding = PaddingValues(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 400.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         // À la une : carrousel des derniers films ajoutés
-        val featured = recentMovies.filter { it.added > 0 }.take(6)
         if (featured.isNotEmpty()) {
-            item { FeaturedCarousel(featured, nav, takeFirst()) }
+            val idx = itemIndex++
+            item { Box(Modifier.snapOnFocus(idx)) { FeaturedCarousel(featured, nav, takeFirst()) } }
         }
 
-        val upcoming = reminders.filter { it.start > now - 5 * 60_000 }.sortedBy { it.start }
         if (upcoming.isNotEmpty()) {
-            item { SectionHeader("Tes rappels", "${upcoming.size}") }
+            val idx = itemIndex++
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp), modifier = Modifier.focusRestorer()) {
-                    items(upcoming) { r ->
-                        val ch = d.channels.firstOrNull { it.streamId == r.streamId }
-                        FocusBox(
-                            onClick = { if (ch != null) nav.playLive(listOf(ch), 0) },
-                            onLongClick = {
-                                AppRepo.dropReminder(r)
-                                android.widget.Toast.makeText(ctx, "Rappel supprimé", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            background = Glass,
-                            modifier = Modifier.width(260.dp).height(84.dp),
-                        ) {
-                            Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
-                                Text("${hm(r.start)} · ${r.channelName}", color = Accent, fontSize = 13.sp, maxLines = 1)
-                                Text(r.title, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.snapOnFocus(idx)) {
+                    SectionHeader("Tes rappels", "${upcoming.size}")
+                    PivotRow {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp), modifier = Modifier.focusRestorer()) {
+                            items(upcoming) { r ->
+                                val ch = d.channels.firstOrNull { it.streamId == r.streamId }
+                                FocusBox(
+                                    onClick = { if (ch != null) nav.playLive(listOf(ch), 0) },
+                                    onLongClick = {
+                                        AppRepo.dropReminder(r)
+                                        android.widget.Toast.makeText(ctx, "Rappel supprimé", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    background = Panel,
+                                    modifier = Modifier.width(260.dp).height(84.dp),
+                                ) {
+                                    Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
+                                        Text("${hm(r.start)} · ${r.channelName}", color = Accent, fontSize = 13.sp, maxLines = 1)
+                                        Text(r.title, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
                             }
                         }
                     }
@@ -147,78 +163,97 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
         }
 
         if (resume.isNotEmpty()) {
-            item { SectionHeader("Continuer à regarder", "${resume.size}") }
+            val idx = itemIndex++
             item {
                 val req = takeFirst()
-                LazyRow(Modifier.height(166.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(6.dp)) {
-                    items(resume) { r ->
-                        ResumeCard(
-                            entry = r,
-                            onClick = { nav.playVod(VodItem(r.key, r.title, r.url, r.image)) },
-                            onLongClick = { AppRepo.forgetProgress(r.key) },
-                            focusRequester = if (r == resume.first()) req else null,
-                        )
+                Column(Modifier.snapOnFocus(idx)) {
+                    SectionHeader("Continuer à regarder", "${resume.size}")
+                    PivotRow {
+                        LazyRow(Modifier.height(166.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(6.dp)) {
+                            items(resume) { r ->
+                                ResumeCard(
+                                    entry = r,
+                                    onClick = { nav.playVod(VodItem(r.key, r.title, r.url, r.image)) },
+                                    onLongClick = { AppRepo.forgetProgress(r.key) },
+                                    focusRequester = if (r == resume.first()) req else null,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
         if (liveRow.isNotEmpty()) {
-            item { SectionHeader(if (favChannels.isEmpty()) "Ta dernière chaîne" else "En ce moment sur tes chaînes", null) }
+            val idx = itemIndex++
             item {
                 val req = takeFirst()
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp), modifier = Modifier.focusRestorer()) {
-                    itemsIndexed(liveRow) { i, ch ->
-                        LiveCard(ch, now, if (i == 0) req else null) { nav.playLive(liveRow, i) }
+                Column(Modifier.snapOnFocus(idx)) {
+                    SectionHeader(if (favChannels.isEmpty()) "Ta dernière chaîne" else "En ce moment sur tes chaînes", null)
+                    PivotRow {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp), modifier = Modifier.focusRestorer()) {
+                            itemsIndexed(liveRow) { i, ch ->
+                                LiveCard(ch, now, if (i == 0) req else null) { nav.playLive(liveRow, i) }
+                            }
+                        }
                     }
                 }
-            }
-        } else {
-            item {
-                Text(
-                    "Astuce : maintiens OK sur une chaîne pour l'ajouter aux favoris, elle apparaîtra ici avec son programme en cours.",
-                    color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp),
-                )
             }
         }
 
         if (recentMovies.isNotEmpty() && recentMovies.first().added > 0) {
-            item { SectionHeader("Films ajoutés récemment", null) }
+            val idx = itemIndex++
             item {
                 val req = takeFirst()
-                LazyRow(Modifier.height(214.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp)) {
-                    itemsIndexed(recentMovies) { i, m ->
-                        Poster(
-                            m.name, m.poster, m.favKey in favs,
-                            onClick = { nav.openMovie(m) },
-                            onLongClick = { toggleFav(ctx, m.favKey, m.name) },
-                            focusRequester = if (i == 0) req else null,
-                            modifier = Modifier.width(134.dp),
-                        )
-                    }
+                Column(Modifier.snapOnFocus(idx)) {
+                    SectionHeader("Films ajoutés récemment", null)
+                    PosterRow(recentMovies, req, title = { it.name }, image = { it.poster }, fav = { it.favKey in favs },
+                        onClick = { nav.openMovie(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) })
                 }
             }
         }
 
         if (recentSeries.isNotEmpty() && recentSeries.first().added > 0) {
-            item { SectionHeader("Séries mises à jour", null) }
+            val idx = itemIndex++
             item {
                 val req = takeFirst()
-                LazyRow(Modifier.height(214.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp)) {
-                    itemsIndexed(recentSeries) { i, s ->
-                        Poster(
-                            s.name, s.cover, s.favKey in favs,
-                            onClick = { nav.openSeries(s) },
-                            onLongClick = { toggleFav(ctx, s.favKey, s.name) },
-                            focusRequester = if (i == 0) req else null,
-                            modifier = Modifier.width(134.dp),
-                        )
-                    }
+                Column(Modifier.snapOnFocus(idx)) {
+                    SectionHeader("Séries mises à jour", null)
+                    PosterRow(recentSeries, req, title = { it.name }, image = { it.cover }, fav = { it.favKey in favs },
+                        onClick = { nav.openSeries(it) }, onLong = { toggleFav(ctx, it.favKey, it.name) })
                 }
             }
         }
     }
+    }
 }
+}
+
+/** Rangée d'affiches : l'affiche sélectionnée reste calée à gauche, la rangée défile dessous. */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun <T> PosterRow(
+    items: List<T>,
+    requester: FocusRequester?,
+    title: (T) -> String,
+    image: (T) -> String?,
+    fav: (T) -> Boolean,
+    onClick: (T) -> Unit,
+    onLong: (T) -> Unit,
+) {
+    PivotRow {
+        LazyRow(Modifier.height(200.dp).focusRestorer(), horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(start = 6.dp, end = 600.dp, top = 6.dp, bottom = 6.dp)) {
+            itemsIndexed(items) { i, it ->
+                Poster(
+                    title(it), image(it), fav(it),
+                    onClick = { onClick(it) },
+                    onLongClick = { onLong(it) },
+                    focusRequester = if (i == 0) requester else null,
+                    modifier = Modifier.width(124.dp),
+                )
+            }
+        }
+    }
 }
 
 /** Carte de chaîne avec son programme en cours. */
@@ -269,7 +304,7 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
     val details = (info.state as? Load.Ok<com.petitjord.tivihome.data.MovieInfo>)?.data
 
     Box(
-        Modifier.fillMaxWidth().height(250.dp).padding(bottom = 6.dp)
+        Modifier.fillMaxWidth().height(260.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
             .border(1.dp, GlassStroke, androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
             .onFocusChanged { hasFocus = it.hasFocus },

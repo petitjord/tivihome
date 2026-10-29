@@ -210,6 +210,7 @@ private fun <T> CatalogGrid(
             } else if (list.isEmpty()) {
                 EmptyText(if (catId == FAV) "Aucun favori.\nMaintiens OK sur une affiche pour l'ajouter." else "Rien dans cette catégorie.")
             } else {
+                ScrollSpec(pivotSpec(0f)) {
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(104.dp),
@@ -224,6 +225,7 @@ private fun <T> CatalogGrid(
                             if (i == focusedIdx.coerceAtMost(list.lastIndex)) restore else null,
                         ) { focusedIdx = i }
                     }
+                }
                 }
             }
             }
