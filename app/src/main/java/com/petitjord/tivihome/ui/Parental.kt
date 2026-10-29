@@ -69,7 +69,7 @@ fun PinDialog(title: String, onDismiss: () -> Unit, onSuccess: () -> Unit) {
             }
         },
         confirmButton = { DialogButton("Valider") { submit() } },
-        dismissButton = { DialogButton("Annuler", onDismiss) },
+        dismissButton = { DialogButton("Annuler", onClick = onDismiss) },
     )
 }
 
@@ -110,7 +110,7 @@ fun GroupMenu(group: Category, onDismiss: () -> Unit, onChanged: () -> Unit) {
                 }
             }
         },
-        dismissButton = { DialogButton("Annuler", onDismiss) },
+        dismissButton = { DialogButton("Annuler", onClick = onDismiss) },
     )
 }
 
