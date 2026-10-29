@@ -101,7 +101,7 @@ private fun LiveContent(cats: List<Category>, channels: List<Channel>, nav: Nav,
             }
         }
 
-        ChannelPreview(preview, Modifier.width(300.dp).fillMaxHeight())
+        ChannelPreview(preview, Modifier.width(250.dp).fillMaxHeight())
     }
 }
 
@@ -124,10 +124,10 @@ fun ChannelRow(
         Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (ch.num > 0) "${ch.num}" else "", color = TextDim, fontSize = 14.sp,
-                modifier = Modifier.width(48.dp),
+                modifier = Modifier.width(40.dp),
             )
-            ChannelLogo(ch.icon, ch.name, Modifier.size(width = 64.dp, height = 40.dp))
-            Spacer(Modifier.width(14.dp))
+            ChannelLogo(ch.icon, ch.name, Modifier.size(width = 56.dp, height = 36.dp))
+            Spacer(Modifier.width(12.dp))
             Text(
                 ch.name, color = if (focused) Color.White else Color(0xFFD7DCE5), fontSize = 16.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),

@@ -141,7 +141,7 @@ private fun <T> CatalogGrid(
             } else {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(140.dp),
+                    columns = GridCells.Adaptive(120.dp),
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                     contentPadding = PaddingValues(6.dp, 6.dp, 6.dp, 32.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),

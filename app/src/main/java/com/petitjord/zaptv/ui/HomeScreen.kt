@@ -53,7 +53,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 
     Row(Modifier.fillMaxSize()) {
         Column(
-            Modifier.width(196.dp).fillMaxHeight().background(Panel).padding(horizontal = 12.dp, vertical = 20.dp),
+            Modifier.width(176.dp).fillMaxHeight().background(Panel).padding(horizontal = 12.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(

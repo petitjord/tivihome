@@ -65,7 +65,7 @@ fun CategoryColumn(
     val state = rememberLazyListState()
     LazyColumn(
         state = state,
-        modifier = modifier.width(230.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
+        modifier = modifier.width(200.dp).fillMaxHeight().background(Color(0xFF10141B)).focusRestorer(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
