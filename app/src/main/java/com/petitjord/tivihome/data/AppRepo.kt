@@ -114,10 +114,12 @@ object AppRepo {
                 lastError = e
             }
         }
-        lastError?.let {
+        lastError?.let { e ->
+            val reply = (e as? ForbiddenException)?.reply?.takeIf { it.isNotBlank() }
             throw java.io.IOException(
-                "le serveur refuse l'accès (403). Vérifie l'adresse complète avec le port (ex. http://exemple.net:8080), " +
-                    "telle qu'elle apparaît dans ta playlist ou ton e-mail d'abonnement.",
+                "le serveur ${c.base} refuse l'accès (403)." +
+                    (reply?.let { "\nRéponse du serveur : « $it »" } ?: "") +
+                    "\nAstuce : colle le lien M3U complet de ton abonnement dans le premier champ.",
             )
         }
         prefs.edit().putString("ua", Net.userAgent).apply()
@@ -165,6 +167,13 @@ object AppRepo {
         val arr = JSONArray()
         accounts.forEach { arr.put(JSONObject().put("s", it.server).put("u", it.username).put("p", it.password)) }
         prefs.edit().putString("accounts", arr.toString()).apply()
+    }
+
+    // ---------- Dernier essai de connexion (prérempli) ----------
+    val lastTriedServer: String get() = prefs.getString("tryServer", "") ?: ""
+    val lastTriedUser: String get() = prefs.getString("tryUser", "") ?: ""
+    fun rememberAttempt(server: String, user: String) {
+        prefs.edit().putString("tryServer", server).putString("tryUser", user).apply()
     }
 
     // ---------- Réglages ----------

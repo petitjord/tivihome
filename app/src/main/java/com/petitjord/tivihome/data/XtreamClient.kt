@@ -48,7 +48,12 @@ class XtreamClient(val account: Account) {
             params.forEach { (k, v) -> url.addQueryParameter(k, v) }
             val req = Request.Builder().url(url.build()).header("User-Agent", Net.userAgent).build()
             http.newCall(req).execute().use { r ->
-                if (r.code == 403) throw ForbiddenException()
+                if (r.code == 403) {
+                    // Garde un extrait lisible de la réponse pour comprendre le refus
+                    val txt = r.body?.string().orEmpty()
+                        .replace(Regex("<[^>]*>"), " ").replace(Regex("\\s+"), " ").trim().take(140)
+                    throw ForbiddenException(txt)
+                }
                 if (!r.isSuccessful) throw IOException("Le serveur a répondu ${r.code}")
                 r.body?.string() ?: ""
             }
@@ -276,4 +281,4 @@ private inline fun <T> JSONArray.mapObj(f: (JSONObject) -> T): List<T> {
 }
 
 /** Le serveur refuse l'accès (souvent : appli non reconnue ou adresse incomplète). */
-class ForbiddenException : IOException("accès refusé par le serveur (403)")
+class ForbiddenException(val reply: String = "") : IOException("accès refusé par le serveur (403)")

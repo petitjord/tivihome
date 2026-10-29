@@ -39,8 +39,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(onLoggedIn: () -> Unit) {
-    var server by rememberSaveable { mutableStateOf("") }
-    var user by rememberSaveable { mutableStateOf("") }
+    var server by rememberSaveable { mutableStateOf(AppRepo.lastTriedServer) }
+    var user by rememberSaveable { mutableStateOf(AppRepo.lastTriedUser) }
     var pass by rememberSaveable { mutableStateOf("") }
     var busy by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
@@ -53,6 +53,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
             return
         }
         busy = true; error = null
+        AppRepo.rememberAttempt(server.trim(), user.trim())
         scope.launch {
             try {
                 if (AppRepo.login(Account(server, user.trim(), pass))) onLoggedIn()
@@ -74,8 +75,17 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
             Text("Connexion Xtream Codes", color = TextDim, fontSize = 18.sp)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
-                value = server, onValueChange = { server = it },
-                label = { Text("Adresse du serveur") },
+                value = server,
+                onValueChange = { v ->
+                    // Lien M3U collé : on en extrait l'adresse, l'identifiant et le mot de passe
+                    val parsed = parseM3uLink(v)
+                    if (parsed != null) {
+                        server = parsed.server; user = parsed.username; pass = parsed.password
+                    } else {
+                        server = v
+                    }
+                },
+                label = { Text("Adresse du serveur ou lien M3U complet") },
                 placeholder = { Text("http://exemple.com:8080") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
@@ -106,5 +116,20 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                 color = TextDim, fontSize = 13.sp,
             )
         }
+    }
+}
+
+/** Extrait serveur / identifiant / mot de passe d'un lien du type http://hote/get.php?username=…&password=… */
+fun parseM3uLink(text: String): Account? {
+    val t = text.trim()
+    if (!t.contains("username=") || !t.contains("password=")) return null
+    return try {
+        val uri = android.net.Uri.parse(if (t.startsWith("http")) t else "http://$t")
+        val u = uri.getQueryParameter("username") ?: return null
+        val p = uri.getQueryParameter("password") ?: return null
+        val port = if (uri.port > 0) ":${uri.port}" else ""
+        Account("${uri.scheme}://${uri.host}$port", u, p)
+    } catch (e: Exception) {
+        null
     }
 }
