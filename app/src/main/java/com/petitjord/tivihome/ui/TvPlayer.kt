@@ -31,11 +31,9 @@ import com.petitjord.tivihome.data.USER_AGENT
 class TvPlayer(ctx: Context) {
 
     val exo: ExoPlayer = run {
-        val http = DefaultHttpDataSource.Factory()
+        // Même client réseau que l'API : tolère les certificats des serveurs IPTV enregistrés
+        val http = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(com.petitjord.tivihome.data.Net.client)
             .setUserAgent(USER_AGENT)
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(30_000)
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http)))
             .build()

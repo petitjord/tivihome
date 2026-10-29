@@ -11,6 +11,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppRepo.init(applicationContext)
+        // Logos et affiches chargés avec le même client réseau tolérant
+        coil.Coil.setImageLoader(
+            coil.ImageLoader.Builder(applicationContext)
+                .okHttpClient(com.petitjord.tivihome.data.Net.client)
+                .crossfade(true)
+                .build(),
+        )
         setContent {
             TiviTheme { App() }
         }

@@ -19,13 +19,12 @@ class XtreamClient(val account: Account) {
 
     val base: String = normalize(account.server)
 
+    init {
+        Net.trustHost(base)
+    }
+
     companion object {
-        private val http = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(90, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build()
+        private val http get() = Net.client
 
         fun normalize(server: String): String {
             var u = server.trim()

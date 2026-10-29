@@ -91,8 +91,16 @@ object AppRepo {
     }
 
     suspend fun login(account: Account): Boolean {
-        val c = XtreamClient(account)
-        if (!c.authenticate()) return false
+        var c = XtreamClient(account)
+        val ok = try {
+            c.authenticate()
+        } catch (e: javax.net.ssl.SSLException) {
+            // HTTPS refusé : beaucoup de serveurs IPTV répondent aussi en HTTP
+            if (!c.base.startsWith("https://")) throw e
+            c = XtreamClient(account.copy(server = "http://" + c.base.removePrefix("https://")))
+            c.authenticate()
+        }
+        if (!ok) return false
         prefs.edit()
             .putString("server", c.base)
             .putString("user", account.username)
