@@ -76,9 +76,9 @@ fun CategoryColumn(
     menuFor?.let { g -> GroupMenu(g, onDismiss = { menuFor = null }, onChanged = { if (AppRepo.groupInvisible(g.id)) onSelect(ALL) }) }
     LazyColumn(
         state = state,
-        modifier = modifier.width(200.dp).fillMaxHeight().padding(vertical = 10.dp).glass(RoundedCornerShape(20.dp)).focusRestorer(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier.width(220.dp).fillMaxHeight().background(RailBg).focusRestorer(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         itemsIndexed(visible) { _, g ->
             val sel = g.id == selectedId
@@ -86,14 +86,16 @@ fun CategoryColumn(
                 onClick = { onSelect(g.id) },
                 onFocus = { onSelect(g.id) },
                 onLongClick = if (g.id.startsWith("__")) null else { { menuFor = g } },
-                background = if (sel) AccentDim else Color.Transparent,
-                modifier = Modifier.fillMaxWidth().height(42.dp),
+                background = if (sel) Color(0x1FFFFFFF) else Color.Transparent,
+                focusedBackground = Color.White,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().height(34.dp),
             ) { focused ->
                 Box(Modifier.fillMaxSize().padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
                     Text(
-                        (if (g.id in locked) "🔒 " else "") + g.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp,
-                        color = if (sel || focused) Color.White else TextDim,
-                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                        (if (g.id in locked) "🔒 " else "") + g.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp,
+                        color = when { focused -> Bg; sel -> Color.White; else -> TextDim },
+                        fontWeight = if (sel || focused) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 }
             }

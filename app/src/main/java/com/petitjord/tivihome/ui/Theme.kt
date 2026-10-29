@@ -29,9 +29,11 @@ object AppTheme {
 
 val Accent: Color get() = AccentChoices[AppTheme.accentIndex.coerceIn(0, AccentChoices.lastIndex)].second
 val AccentDim: Color get() = Accent.copy(alpha = 0.32f).compositeOn(if (AppTheme.oled) Color.Black else Color(0xFF141922))
-val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF0E1116)
-val Panel: Color get() = if (AppTheme.oled) Color(0xFF0C0C0C) else Color(0xFF151920)
-val Panel2: Color get() = if (AppTheme.oled) Color(0xFF181818) else Color(0xFF1E242D)
+val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF111A2B)
+val Panel: Color get() = if (AppTheme.oled) Color(0xFF0C0C0C) else Color(0xFF17233A)
+val Panel2: Color get() = if (AppTheme.oled) Color(0xFF181818) else Color(0xFF1F2E4A)
+/** Barre de menu, un ton plus sombre que le contenu. */
+val RailBg: Color get() = if (AppTheme.oled) Color(0xFF080808) else Color(0xFF0C1422)
 val TextDim = Color(0xFF8A94A6)
 
 /** Seconde teinte d'accent pour les dégradés (décalée vers le violet). */
@@ -42,9 +44,9 @@ val Accent2: Color get() = Color(
 )
 
 // Surfaces « verre » : translucides, laissent voir le fond animé
-val Glass: Color get() = if (AppTheme.oled) Color(0xFF0E0E0E) else Color(0x14FFFFFF)
-val GlassStrong: Color get() = if (AppTheme.oled) Color(0xFF151515) else Color(0x1FFFFFFF)
-val GlassStroke = Color(0x1AFFFFFF)
+val Glass: Color get() = Panel
+val GlassStrong: Color get() = Panel2
+val GlassStroke = Color(0x00FFFFFF)
 val GlassDark = Color(0xB30A0D12)
 val Gold = Color(0xFFFFC94D)
 

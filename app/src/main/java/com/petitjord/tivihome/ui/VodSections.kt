@@ -72,7 +72,10 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
             titleOf = { it.name },
             imageOf = { it.poster },
             metaOf = { m -> m.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
-            descriptionOf = { m -> AppRepo.vodInfo(m).plot },
+            detailsOf = { m ->
+                val i = AppRepo.vodInfo(m)
+                HeroDetails(i.plot, i.backdrop, i.year, i.durationText, i.genre, i.rating?.takeIf { it != "0" && it.isNotBlank() }, i.cast, i.director)
+            },
         ) { m, requester, onFocus ->
             Poster(
                 title = m.name, image = m.poster, favorite = m.favKey in favs,
@@ -103,7 +106,10 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
             titleOf = { it.name },
             imageOf = { it.cover },
             metaOf = { se -> se.rating?.takeIf { it != "0" && it.isNotBlank() }?.let { "★ $it" } },
-            descriptionOf = { se -> se.plot ?: AppRepo.seriesInfo(se.seriesId).plot },
+            detailsOf = { se ->
+                val i = AppRepo.seriesInfo(se.seriesId)
+                HeroDetails(i.plot ?: se.plot, i.backdrop, null, null, i.genre, se.rating?.takeIf { it != "0" && it.isNotBlank() }, i.cast, null)
+            },
         ) { s, requester, onFocus ->
             Poster(
                 title = s.name, image = s.cover, favorite = s.favKey in favs,
@@ -129,7 +135,7 @@ private fun <T> CatalogGrid(
     titleOf: (T) -> String,
     imageOf: (T) -> String?,
     metaOf: (T) -> String?,
-    descriptionOf: suspend (T) -> String?,
+    detailsOf: suspend (T) -> HeroDetails?,
     cell: @Composable (T, androidx.compose.ui.focus.FocusRequester?, () -> Unit) -> Unit,
 ) {
     val resumeKeys = AppRepo.resume
@@ -159,43 +165,41 @@ private fun <T> CatalogGrid(
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(groups, catId, onSelect = { catId = it })
         Column(Modifier.weight(1f).fillMaxHeight()) {
-            // Bandeau : affiche floutée et titre de l'élément survolé
+            // Fiche de l'élément survolé : texte à gauche, grande image nette à droite
             val hero = list.getOrNull(focusedIdx.coerceAtMost(list.lastIndex).coerceAtLeast(0))
-            // Résumé chargé après un court arrêt sur l'affiche (pas pendant le défilement)
-            val desc = rememberLoad(hero?.let(titleOf)) {
-                if (hero == null) null else { kotlinx.coroutines.delay(350); runCatching { descriptionOf(hero) }.getOrNull() }
+            val det = rememberLoad(hero?.let(titleOf)) {
+                if (hero == null) null else { kotlinx.coroutines.delay(300); runCatching { detailsOf(hero) }.getOrNull() }
             }
-            Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(bottomStart = 16.dp))) {
-                val img = hero?.let(imageOf)
+            val d = (det.state as? Load.Ok<HeroDetails?>)?.data
+            Box(Modifier.fillMaxWidth().height(230.dp)) {
+                val img = d?.backdrop ?: hero?.let(imageOf)
                 if (img != null) {
                     AsyncImage(
-                        img, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().blur(28.dp).graphicsLayer { alpha = 0.45f },
+                        img, null, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd,
+                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(Alignment.TopEnd),
                     )
                 }
-                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg, Color(0x990B0E13), Color(0x330B0E13)))))
-                Column(Modifier.align(Alignment.CenterStart).padding(start = 22.dp, end = 22.dp)) {
+                // Fondu de l'image dans le fond, vers la gauche et vers le bas
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0.30f to Bg, 0.55f to Bg.copy(alpha = 0.75f), 1f to Color.Transparent)))
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Bg)))
+                Column(Modifier.fillMaxWidth(0.55f).padding(start = 16.dp, top = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        "${groups.firstOrNull { it.id == catId }?.name ?: ""}  ·  ${list.size} $unit",
-                        color = Accent, fontSize = 13.sp, maxLines = 1,
-                    )
-                    Text(
-                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 26.sp,
+                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 24.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
-                    hero?.let(metaOf)?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, color = Gold, fontSize = 13.sp, maxLines = 1)
-                    }
-                    val plot = (desc.state as? Load.Ok<String?>)?.data
+                    val meta = listOfNotNull(d?.year, d?.duration, d?.genre, (d?.rating ?: hero?.let(metaOf))?.let { if (it.startsWith("★")) it else "★ $it" })
+                        .filter { it.isNotBlank() }.joinToString("  ·  ")
+                    if (meta.isNotBlank()) Text(meta, color = TextDim, fontSize = 13.sp, maxLines = 1)
+                    d?.cast?.let { Text("Acteurs : $it", color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    d?.director?.let { Text("Réalisation : $it", color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Text(
                         when {
-                            !plot.isNullOrBlank() -> plot
-                            desc.state is Load.Loading && hero != null -> "…"
+                            !d?.plot.isNullOrBlank() -> d!!.plot!!
+                            det.state is Load.Loading && hero != null -> "…"
                             else -> ""
                         },
-                        color = Color(0xFFC9D1DC), fontSize = 14.sp, lineHeight = 19.sp,
-                        maxLines = 3, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(0.85f).padding(top = 4.dp),
+                        color = Color(0xFFD0D7E2), fontSize = 13.sp, lineHeight = 18.sp,
+                        maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -208,7 +212,7 @@ private fun <T> CatalogGrid(
             } else {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(96.dp),
+                    columns = GridCells.Adaptive(104.dp),
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                     contentPadding = PaddingValues(6.dp, 6.dp, 6.dp, 32.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -342,3 +346,15 @@ fun SeriesDetailScreen(series: Series, nav: Nav) {
     }
 }
 }
+
+/** Fiche affichée en haut de la grille pour l'élément survolé. */
+data class HeroDetails(
+    val plot: String?,
+    val backdrop: String?,
+    val year: String?,
+    val duration: String?,
+    val genre: String?,
+    val rating: String?,
+    val cast: String?,
+    val director: String?,
+)

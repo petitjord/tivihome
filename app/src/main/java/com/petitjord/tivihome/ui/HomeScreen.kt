@@ -64,9 +64,8 @@ private const val LIVE = 1
 
 private val sections = listOf(
     Section("Accueil", Icons.Filled.Home),
-    Section("TV en direct", Icons.Filled.PlayArrow),
+    Section("TV", Icons.Filled.PlayArrow),
     Section("Recherche", Icons.Filled.Search),
-    Section("Guide TV", Icons.Filled.DateRange),
     Section("Replay", Icons.Filled.Refresh),
     Section("Films", Icons.Filled.Star),
     Section("Séries", Icons.Filled.List),
@@ -87,9 +86,9 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         if (selected != LIVE && !tv.fullscreen) tv.stop()
     }
 
-    Box(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 14.dp)) {
-        // Contenu, décalé de la largeur du menu replié
-        Box(Modifier.fillMaxSize().padding(start = 72.dp)) {
+    Box(Modifier.fillMaxSize()) {
+        // Contenu, décalé de la largeur du menu replié (marges de sécurité TV en haut, bas et droite)
+        Box(Modifier.fillMaxSize().padding(start = 76.dp, top = 18.dp, bottom = 12.dp, end = 24.dp)) {
             AnimatedContent(
                 targetState = selected,
                 transitionSpec = {
@@ -100,13 +99,12 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
             ) { s ->
                 when (s) {
                     0 -> HomeSection(nav, focusContent)
-                    1 -> LiveSection(nav, focusContent)
+                    1 -> GuideSection(nav, focusContent)
                     2 -> SearchSection(nav)
-                    3 -> GuideSection(nav, focusContent)
-                    4 -> ReplaySection(nav, focusContent)
-                    5 -> MoviesSection(nav, focusContent)
-                    6 -> SeriesSection(nav, focusContent)
-                    7 -> FavoritesSection(nav, focusContent)
+                    3 -> ReplaySection(nav, focusContent)
+                    4 -> MoviesSection(nav, focusContent)
+                    5 -> SeriesSection(nav, focusContent)
+                    6 -> FavoritesSection(nav, focusContent)
                     else -> SettingsSection(nav)
                 }
             }
@@ -124,17 +122,16 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         )
         Box(
             Modifier
-                .width(railWidth - 8.dp)
+                .width(railWidth + 4.dp)
                 .fillMaxHeight()
                 .then(
                     if (railOpen && AppTheme.richEffects) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
                     else Modifier,
                 )
-                .glass(RoundedCornerShape(22.dp), strong = railOpen)
-                .background(if (railOpen) GlassDark else Color.Transparent)
+                .background(RailBg)
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
-                .padding(horizontal = 8.dp, vertical = 14.dp),
+                .padding(start = 14.dp, end = 10.dp, top = 22.dp, bottom = 14.dp),
         ) {
             // Indicateur de la section active
             Box(
@@ -142,8 +139,8 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     .offset(y = indicatorY)
                     .fillMaxWidth()
                     .height(itemH)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Brush.horizontalGradient(listOf(Accent.copy(alpha = 0.38f), Accent2.copy(alpha = 0.20f)))),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0x26FFFFFF)),
             )
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                 Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
@@ -163,8 +160,8 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                         onClick = { selected = i },
                         focusRequester = if (isSel) railFocus else null,
                         background = Color.Transparent,
-                        focusedBackground = Color(0x1FFFFFFF),
-                        shape = RoundedCornerShape(14.dp),
+                        focusedBackground = Color.White,
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().height(itemH),
                     ) { focused ->
                         Row(
@@ -173,13 +170,13 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                         ) {
                             Icon(
                                 s.icon, s.label, modifier = Modifier.size(20.dp),
-                                tint = if (isSel || focused) Color.White else TextDim,
+                                tint = when { focused -> Bg; isSel -> Color.White; else -> TextDim },
                             )
                             AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
                                 Text(
                                     s.label, maxLines = 1, fontSize = 15.sp,
                                     fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isSel || focused) Color.White else TextDim,
+                                    color = when { focused -> Bg; isSel -> Color.White; else -> TextDim },
                                     modifier = Modifier.padding(start = 14.dp),
                                 )
                             }
