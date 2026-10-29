@@ -174,7 +174,7 @@ private fun TvHeader(f: Focused?, nav: Nav, channels: List<Channel>, modifier: M
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (p != null) {
-                        Text("${hm(p.start)} – ${hm(p.end)}", color = TextDim, fontSize = 13.sp)
+                        Text("${hm(p.start)} – ${hm(p.end)}", color = TextDim, fontSize = 13.sp, maxLines = 1, softWrap = false)
                         Spacer(Modifier.width(10.dp))
                         if (p.isNow()) {
                             LinearProgressIndicator(
@@ -182,7 +182,7 @@ private fun TvHeader(f: Focused?, nav: Nav, channels: List<Channel>, modifier: M
                                 modifier = Modifier.width(90.dp).height(3.dp),
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text("${((p.end - System.currentTimeMillis()) / 60_000).coerceAtLeast(0)} min restantes", color = TextDim, fontSize = 13.sp)
+                            Text("${((p.end - System.currentTimeMillis()) / 60_000).coerceAtLeast(0)} min restantes", color = TextDim, fontSize = 13.sp, maxLines = 1, softWrap = false)
                         }
                     }
                     Spacer(Modifier.weight(1f))
