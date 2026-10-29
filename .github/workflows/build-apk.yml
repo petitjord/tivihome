@@ -24,7 +24,15 @@ jobs:
           gradle-version: "8.9"
 
       - name: Compiler
-        run: gradle :app:assembleRelease --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle :app:assembleRelease --no-daemon 2>&1 | tee build.log || {
+            # Remonte les erreurs en annotations lisibles sur la page du build
+            grep -E "^e: |What went wrong|> |error:|Could not" build.log | head -40 | while IFS= read -r l; do
+              echo "::error::${l//%/%25}"
+            done
+            exit 1
+          }
 
       - name: Renommer l'APK
         run: cp app/build/outputs/apk/release/app-release.apk Tivihome.apk
