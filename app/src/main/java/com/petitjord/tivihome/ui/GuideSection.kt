@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -41,10 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.petitjord.zaptv.data.AppRepo
-import com.petitjord.zaptv.data.Category
-import com.petitjord.zaptv.data.Channel
-import com.petitjord.zaptv.data.Programme
+import com.petitjord.tivihome.data.AppRepo
+import com.petitjord.tivihome.data.Category
+import com.petitjord.tivihome.data.Channel
+import com.petitjord.tivihome.data.Programme
 
 private val DP_PER_MIN = 5.dp
 private const val WINDOW_MIN = 12 * 60          // 12 heures de grille
@@ -122,7 +122,7 @@ private fun GuideContent(cats: List<Category>, channels: List<Channel>, nav: Nav
                         hScroll = hScroll,
                         firstCellRequester = if (i == 0) restore else null,
                         onFocus = { p -> focused = Focused(ch, p) },
-                        onPlay = { nav.play(PlayRequest(ch.name, channels = list, index = i)) },
+                        onPlay = { nav.playLive(list, i) },
                     )
                 }
             }

@@ -1,5 +1,8 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -66,14 +69,18 @@ fun FocusBox(
     val longClick by rememberUpdatedState(onLongClick)
     val focus by rememberUpdatedState(onFocus)
 
+    // Transitions douces au passage du focus
+    val scale by animateFloatAsState(if (focused) scaleOnFocus else 1f, tween(160), label = "scale")
+    val bg by animateColorAsState(if (focused) focusedBackground else background, tween(160), label = "bg")
+    val borderColor by animateColorAsState(if (focused) Accent else Color.Transparent, tween(160), label = "border")
+
     Box(
         modifier
             .graphicsLayer {
-                val s = if (focused) scaleOnFocus else 1f
-                scaleX = s; scaleY = s
+                scaleX = scale; scaleY = scale
             }
-            .background(if (focused) focusedBackground else background, shape)
-            .border(2.dp, if (focused) Accent else Color.Transparent, shape)
+            .background(bg, shape)
+            .border(2.dp, borderColor, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused && !focused) focus?.invoke()

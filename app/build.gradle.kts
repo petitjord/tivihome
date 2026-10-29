@@ -7,11 +7,11 @@ plugins {
 val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
 
 android {
-    namespace = "com.petitjord.zaptv"
+    namespace = "com.petitjord.tivihome"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.petitjord.zaptv"
+        applicationId = "com.petitjord.tivihome"
         minSdk = 26
         targetSdk = 34
         versionCode = buildNumber
@@ -20,22 +20,22 @@ android {
 
     // Clé fixe : chaque nouvelle version s'installe par-dessus l'ancienne.
     signingConfigs {
-        create("zap") {
-            storeFile = file("zaptv.keystore")
+        create("tivi") {
+            storeFile = file("tivihome.keystore")
             storeType = "JKS"
-            storePassword = "zaptvpass"
-            keyAlias = "zaptv"
-            keyPassword = "zaptvpass"
+            storePassword = "tivihomepass"
+            keyAlias = "tivihome"
+            keyPassword = "tivihomepass"
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("zap")
+            signingConfig = signingConfigs.getByName("tivi")
         }
         debug {
-            signingConfig = signingConfigs.getByName("zap")
+            signingConfig = signingConfigs.getByName("tivi")
         }
     }
 

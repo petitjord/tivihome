@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -45,10 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.petitjord.zaptv.data.AppRepo
-import com.petitjord.zaptv.data.Category
-import com.petitjord.zaptv.data.Movie
-import com.petitjord.zaptv.data.Series
+import com.petitjord.tivihome.data.AppRepo
+import com.petitjord.tivihome.data.Category
+import com.petitjord.tivihome.data.Movie
+import com.petitjord.tivihome.data.Series
 
 // ===================== Films =====================
 
@@ -65,10 +68,12 @@ fun MoviesSection(nav: Nav, focusContent: Boolean) {
             isFav = { it.favKey in favs },
             focusContent = focusContent,
             unit = "films",
+            titleOf = { it.name },
+            imageOf = { it.poster },
         ) { m, requester, onFocus ->
             Poster(
                 title = m.name, image = m.poster, favorite = m.favKey in favs,
-                onClick = { nav.play(PlayRequest(m.name, url = AppRepo.movieUrl(m))) },
+                onClick = { nav.playVod(m.name, AppRepo.movieUrl(m)) },
                 onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                 onFocus = onFocus, focusRequester = requester,
             )
@@ -91,6 +96,8 @@ fun SeriesSection(nav: Nav, focusContent: Boolean) {
             isFav = { it.favKey in favs },
             focusContent = focusContent,
             unit = "séries",
+            titleOf = { it.name },
+            imageOf = { it.cover },
         ) { s, requester, onFocus ->
             Poster(
                 title = s.name, image = s.cover, favorite = s.favKey in favs,
@@ -112,6 +119,8 @@ private fun <T> CatalogGrid(
     isFav: (T) -> Boolean,
     focusContent: Boolean,
     unit: String,
+    titleOf: (T) -> String,
+    imageOf: (T) -> String?,
     cell: @Composable (T, androidx.compose.ui.focus.FocusRequester?, () -> Unit) -> Unit,
 ) {
     val groups = remember(cats) { listOf(Category(FAV, "★ Favoris"), Category(ALL, "Tout")) + cats }
@@ -134,8 +143,31 @@ private fun <T> CatalogGrid(
 
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(groups, catId, onSelect = { catId = it })
-        Column(Modifier.weight(1f).fillMaxHeight().padding(start = 16.dp, top = 16.dp, end = 12.dp)) {
-            SectionHeader(groups.firstOrNull { it.id == catId }?.name ?: "", "${list.size} $unit")
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            // Bandeau : affiche floutée et titre de l'élément survolé
+            val hero = list.getOrNull(focusedIdx.coerceAtMost(list.lastIndex).coerceAtLeast(0))
+            Box(Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(bottomStart = 16.dp))) {
+                val img = hero?.let(imageOf)
+                if (img != null) {
+                    AsyncImage(
+                        img, null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().blur(28.dp).graphicsLayer { alpha = 0.45f },
+                    )
+                }
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg, Color(0x990B0E13), Color(0x330B0E13)))))
+                Column(Modifier.align(Alignment.CenterStart).padding(start = 22.dp, end = 22.dp)) {
+                    Text(
+                        "${groups.firstOrNull { it.id == catId }?.name ?: ""}  ·  ${list.size} $unit",
+                        color = Accent, fontSize = 13.sp, maxLines = 1,
+                    )
+                    Text(
+                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp)) {
             if (list.isEmpty()) {
                 EmptyText(if (catId == FAV) "Aucun favori.\nMaintiens OK sur une affiche pour l'ajouter." else "Rien dans cette catégorie.")
             } else {
@@ -155,6 +187,7 @@ private fun <T> CatalogGrid(
                     }
                 }
             }
+            }
         }
     }
 }
@@ -163,7 +196,7 @@ private fun <T> CatalogGrid(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SeriesDetailScreen(series: Series, nav: Nav, focusContent: Boolean) {
+fun SeriesDetailScreen(series: Series, nav: Nav) {
     val data = rememberLoad("info-${series.seriesId}") { AppRepo.seriesInfo(series.seriesId) }
     val ctx = LocalContext.current
 
@@ -230,7 +263,7 @@ fun SeriesDetailScreen(series: Series, nav: Nav, focusContent: Boolean) {
                     ) {
                         itemsIndexed(episodes) { i, e ->
                             FocusBox(
-                                onClick = { nav.play(PlayRequest("${series.name} — ${e.title}", url = AppRepo.episodeUrl(e))) },
+                                onClick = { nav.playVod("${series.name} — ${e.title}", AppRepo.episodeUrl(e)) },
                                 focusRequester = if (i == 0) restore else null,
                                 modifier = Modifier.fillMaxWidth().height(64.dp),
                             ) {

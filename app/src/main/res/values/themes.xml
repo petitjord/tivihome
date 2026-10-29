@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ZapTV" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/zap_bg</item>
-        <item name="android:colorBackground">@color/zap_bg</item>
-        <item name="android:statusBarColor">@color/zap_bg</item>
-        <item name="android:navigationBarColor">@color/zap_bg</item>
+    <style name="Theme.Tivihome" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/tivi_bg</item>
+        <item name="android:colorBackground">@color/tivi_bg</item>
+        <item name="android:statusBarColor">@color/tivi_bg</item>
+        <item name="android:navigationBarColor">@color/tivi_bg</item>
     </style>
 </resources>

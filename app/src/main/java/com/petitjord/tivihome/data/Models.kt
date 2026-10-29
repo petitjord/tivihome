@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.data
+package com.petitjord.tivihome.data
 
 data class Account(val server: String, val username: String, val password: String)
 
@@ -56,6 +56,10 @@ data class Programme(
     val end: Long,
 ) {
     fun isNow(now: Long = System.currentTimeMillis()) = now in start until end
+
+    /** Avancement entre 0 et 1. */
+    fun progress(now: Long = System.currentTimeMillis()): Float =
+        ((now - start).toFloat() / (end - start).coerceAtLeast(1)).coerceIn(0f, 1f)
 }
 
 data class AccountInfo(val status: String?, val expiry: Long?, val maxConnections: String?)

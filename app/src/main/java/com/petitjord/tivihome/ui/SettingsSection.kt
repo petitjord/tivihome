@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
-import com.petitjord.zaptv.data.AppRepo
+import com.petitjord.tivihome.data.AppRepo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,7 +56,7 @@ fun SettingsSection(nav: Nav) {
             Choice("HLS (.m3u8)", AppRepo.liveFormat == "m3u8") { AppRepo.setFormat("m3u8") }
         }
         Text(
-            "Si une chaîne ne démarre pas, essaie l'autre format. ZapTV bascule aussi automatiquement en cas d'échec.",
+            "Si une chaîne ne démarre pas, essaie l'autre format. Tivihome bascule aussi automatiquement en cas d'échec.",
             color = TextDim, fontSize = 13.sp,
         )
 

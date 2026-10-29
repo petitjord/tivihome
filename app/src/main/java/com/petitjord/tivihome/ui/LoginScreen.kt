@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,8 +33,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.petitjord.zaptv.data.Account
-import com.petitjord.zaptv.data.AppRepo
+import com.petitjord.tivihome.data.Account
+import com.petitjord.tivihome.data.AppRepo
 import kotlinx.coroutines.launch
 
 @Composable
@@ -70,7 +70,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
             Modifier.width(520.dp).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("ZapTV", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Accent)
+            Text("Tivihome", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Accent)
             Text("Connexion Xtream Codes", color = TextDim, fontSize = 18.sp)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(

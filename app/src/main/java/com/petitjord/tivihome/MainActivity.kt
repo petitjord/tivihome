@@ -1,18 +1,18 @@
-package com.petitjord.zaptv
+package com.petitjord.tivihome
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.petitjord.zaptv.data.AppRepo
-import com.petitjord.zaptv.ui.App
-import com.petitjord.zaptv.ui.ZapTheme
+import com.petitjord.tivihome.data.AppRepo
+import com.petitjord.tivihome.ui.App
+import com.petitjord.tivihome.ui.TiviTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppRepo.init(applicationContext)
         setContent {
-            ZapTheme { App() }
+            TiviTheme { App() }
         }
     }
 }

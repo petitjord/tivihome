@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.data
+package com.petitjord.tivihome.data
 
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +12,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-const val USER_AGENT = "ZapTV/1.0 (Android TV)"
+const val USER_AGENT = "Tivihome/1.0 (Android TV)"
 
 /** Client de l'API publique Xtream Codes (player_api.php). */
 class XtreamClient(val account: Account) {

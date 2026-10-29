@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -14,7 +14,7 @@ val TextDim = Color(0xFF8A94A6)
 val Gold = Color(0xFFFFC94D)
 
 @Composable
-fun ZapTheme(content: @Composable () -> Unit) {
+fun TiviTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Accent,

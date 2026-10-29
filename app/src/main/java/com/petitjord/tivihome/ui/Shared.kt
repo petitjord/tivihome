@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import android.content.Context
 import android.widget.Toast
@@ -35,8 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.petitjord.zaptv.data.AppRepo
-import com.petitjord.zaptv.data.Category
+import com.petitjord.tivihome.data.AppRepo
+import com.petitjord.tivihome.data.Category
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

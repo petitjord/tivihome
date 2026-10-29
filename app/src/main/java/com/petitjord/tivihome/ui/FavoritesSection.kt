@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.ui
+package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,10 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.petitjord.zaptv.data.AppRepo
-import com.petitjord.zaptv.data.Channel
-import com.petitjord.zaptv.data.Movie
-import com.petitjord.zaptv.data.Series
+import com.petitjord.tivihome.data.AppRepo
+import com.petitjord.tivihome.data.Channel
+import com.petitjord.tivihome.data.Movie
+import com.petitjord.tivihome.data.Series
 
 private data class FavData(val channels: List<Channel>, val movies: List<Movie>, val series: List<Series>)
 
@@ -63,7 +63,7 @@ private fun FavContent(all: FavData, favs: Set<String>, nav: Nav, focusContent: 
             itemsIndexed(channels) { i, ch ->
                 ChannelRow(
                     ch = ch, favorite = true,
-                    onClick = { nav.play(PlayRequest(ch.name, channels = channels, index = i)) },
+                    onClick = { nav.playLive(channels, i) },
                     onLongClick = { toggleFav(ctx, ch.favKey, ch.name) },
                     onFocus = {},
                     requester = if (i == 0) restore else null,
@@ -77,7 +77,7 @@ private fun FavContent(all: FavData, favs: Set<String>, nav: Nav, focusContent: 
                     items(movies) { m ->
                         Poster(
                             m.name, m.poster, true,
-                            onClick = { nav.play(PlayRequest(m.name, url = AppRepo.movieUrl(m))) },
+                            onClick = { nav.playVod(m.name, AppRepo.movieUrl(m)) },
                             onLongClick = { toggleFav(ctx, m.favKey, m.name) },
                             focusRequester = if (channels.isEmpty() && m == movies.first()) restore else null,
                             modifier = Modifier.width(144.dp),

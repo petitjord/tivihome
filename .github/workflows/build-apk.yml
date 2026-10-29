@@ -27,19 +27,19 @@ jobs:
         run: gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Renommer l'APK
-        run: cp app/build/outputs/apk/release/app-release.apk ZapTV.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Tivihome.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ZapTV
-          path: ZapTV.apk
+          name: Tivihome
+          path: Tivihome.apk
 
       - name: Publier la version
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: ZapTV 1.0.${{ github.run_number }}
+          name: Tivihome 1.0.${{ github.run_number }}
           body: |
-            APK à installer sur Android TV : télécharge **ZapTV.apk** ci-dessous.
-          files: ZapTV.apk
+            APK à installer sur Android TV : télécharge **Tivihome.apk** ci-dessous.
+          files: Tivihome.apk
           make_latest: true

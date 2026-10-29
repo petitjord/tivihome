@@ -1,4 +1,4 @@
-package com.petitjord.zaptv.data
+package com.petitjord.tivihome.data
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -33,7 +33,7 @@ object AppRepo {
 
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
-        prefs = ctx.getSharedPreferences("zaptv", Context.MODE_PRIVATE)
+        prefs = ctx.getSharedPreferences("tivihome", Context.MODE_PRIVATE)
         favorites = prefs.getStringSet("favorites", emptySet())!!.toSet()
         liveFormat = prefs.getString("liveFormat", "ts") ?: "ts"
         val server = prefs.getString("server", null)
