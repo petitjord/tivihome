@@ -114,6 +114,12 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
 
+        // À la une : carrousel des derniers films ajoutés
+        val featured = recentMovies.filter { it.added > 0 }.take(6)
+        if (featured.isNotEmpty()) {
+            item { FeaturedCarousel(featured, nav, takeFirst()) }
+        }
+
         val upcoming = reminders.filter { it.start > now - 5 * 60_000 }.sortedBy { it.start }
         if (upcoming.isNotEmpty()) {
             item { SectionHeader("Tes rappels", "${upcoming.size}") }
@@ -263,7 +269,7 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
     val details = (info.state as? Load.Ok<com.petitjord.tivihome.data.MovieInfo>)?.data
 
     Box(
-        Modifier.fillMaxWidth().height(290.dp).padding(bottom = 6.dp)
+        Modifier.fillMaxWidth().height(250.dp).padding(bottom = 6.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
             .border(1.dp, GlassStroke, androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
             .onFocusChanged { hasFocus = it.hasFocus },
@@ -292,8 +298,8 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
                         Text("   $it", color = Color(0xFFD7DCE5), fontSize = 13.sp)
                     }
             }
-            Text(m.name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 38.sp)
-            details?.plot?.let { Text(it, color = Color(0xFFC9D1DC), fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, lineHeight = 19.sp) }
+            Text(m.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            details?.plot?.let { Text(it, color = Color(0xFFC9D1DC), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp) }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
                 ActionButton("▶  Lecture", primary = true, requester = requester) { nav.playVod(movieItem(m)) }
                 ActionButton("Détails") { nav.openMovie(m) }

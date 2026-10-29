@@ -130,8 +130,8 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     if (railOpen && AppTheme.richEffects) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
                     else Modifier,
                 )
-                .clip(RoundedCornerShape(18.dp))
-                .background(if (railOpen) Panel2 else Panel)
+                .glass(RoundedCornerShape(22.dp), strong = railOpen)
+                .background(if (railOpen) GlassDark else Color.Transparent)
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
                 .padding(horizontal = 8.dp, vertical = 14.dp),
@@ -143,7 +143,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     .fillMaxWidth()
                     .height(itemH)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Accent.copy(alpha = 0.28f)),
+                    .background(Brush.horizontalGradient(listOf(Accent.copy(alpha = 0.38f), Accent2.copy(alpha = 0.20f)))),
             )
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                 Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {

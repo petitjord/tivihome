@@ -42,9 +42,9 @@ val Accent2: Color get() = Color(
 )
 
 // Surfaces « verre » : translucides, laissent voir le fond animé
-val Glass: Color get() = Panel
-val GlassStrong: Color get() = Panel2
-val GlassStroke = Color(0x0DFFFFFF)
+val Glass: Color get() = if (AppTheme.oled) Color(0xFF0E0E0E) else Color(0x14FFFFFF)
+val GlassStrong: Color get() = if (AppTheme.oled) Color(0xFF151515) else Color(0x1FFFFFFF)
+val GlassStroke = Color(0x1AFFFFFF)
 val GlassDark = Color(0xB30A0D12)
 val Gold = Color(0xFFFFC94D)
 
