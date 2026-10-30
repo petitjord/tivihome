@@ -108,10 +108,7 @@ private fun LiveContent(cats: List<Category>, channels: List<Channel>, nav: Nav,
         CategoryColumn(groups, catId, onSelect = { catId = it })
 
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, top = 16.dp, end = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { SectionHeader(groups.firstOrNull { it.id == catId }?.name ?: "", "${list.size}") }
-                ActionButton("▦ Multi-écran") { nav.openMulti(list.ifEmpty { channels }) }
-            }
+            SectionHeader(groups.firstOrNull { it.id == catId }?.name ?: "", "${list.size}")
             if (AppRepo.groupNeedsPin(catId)) {
                 LockedGroupView()
             } else if (list.isEmpty()) {

@@ -166,7 +166,7 @@ fun LiveFullScreen(nav: Nav) {
             .focusable(),
     ) {
         VideoSurface(Modifier.fillMaxSize())
-        WatchClock(Modifier.align(Alignment.TopStart))
+        SmallClock(Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 32.dp))
 
         if (tv.buffering && tv.error == null) {
             CircularProgressIndicator(color = Accent, modifier = Modifier.align(Alignment.Center).size(56.dp))
@@ -349,7 +349,6 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(hm(System.currentTimeMillis()), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
             if (index >= 0) Text("${index + 1} / $total", color = TextDim, fontSize = 13.sp)
             Text("▲▼ zapper · OK liste · OK maintenu pistes · 0 précédente", color = TextDim, fontSize = 11.sp)
         }
@@ -414,7 +413,7 @@ fun VodScreen(queue: List<VodItem>, startIndex: Int) {
         },
     ) {
         VideoSurface(Modifier.fillMaxSize(), withControls = true)
-        WatchClock(Modifier.align(Alignment.TopStart))
+        SmallClock(Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 32.dp))
         if (tv.buffering && tv.error == null) {
             CircularProgressIndicator(color = Accent, modifier = Modifier.align(Alignment.Center).size(56.dp))
         }
@@ -422,7 +421,7 @@ fun VodScreen(queue: List<VodItem>, startIndex: Int) {
             ErrorBox("$it\nAppuie sur Retour pour revenir.", Modifier.align(Alignment.Center))
         }
         if (showSkip) {
-            Pill("⏩  Passer l'intro : touche Menu ou ⏩", Modifier.align(Alignment.TopEnd).padding(28.dp))
+            Pill("⏩  Passer l'intro : touche Menu ou ⏩", Modifier.align(Alignment.TopCenter).padding(28.dp))
         }
         if (countdown > 0 && next != null) {
             Column(
@@ -524,22 +523,3 @@ private fun TrackRow(label: String, selected: Boolean, requester: FocusRequester
     }
 }
 
-/** Heure affichée en permanence en haut à gauche pendant la lecture. */
-@Composable
-fun WatchClock(modifier: Modifier = Modifier) {
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = System.currentTimeMillis()
-            // Se réveille pile au changement de minute
-            delay(60_000 - now % 60_000)
-        }
-    }
-    Box(
-        modifier.padding(start = 32.dp, top = 22.dp)
-            .background(Color(0x990B0E13), RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Text(hm(now), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium)
-    }
-}

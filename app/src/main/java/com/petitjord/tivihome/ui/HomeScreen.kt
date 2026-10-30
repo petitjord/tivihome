@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.sp
 
 private data class Section(val label: String, val icon: ImageVector)
 
-/** Index de « TV en direct » : seule section qui garde l'aperçu vidéo actif. */
+/** Index de « TV » : seule section qui garde l'aperçu vidéo actif. */
 private const val LIVE = 1
 
 private val sections = listOf(
@@ -70,7 +70,6 @@ private val sections = listOf(
     Section("Films", Icons.Filled.Star),
     Section("Séries", Icons.Filled.List),
     Section("Favoris", Icons.Filled.Favorite),
-    Section("Paramètres", Icons.Filled.Settings),
 )
 
 @Composable
@@ -78,12 +77,18 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
     val tv = LocalTvPlayer.current
     var selected by rememberSaveable { mutableIntStateOf(LIVE) }
     var railOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
     val railFocus = rememberInitialFocus(!focusContent)
-    val railWidth by animateDpAsState(if (railOpen) 220.dp else 72.dp, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 420f), label = "rail")
+    val settingsFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val railWidth by animateDpAsState(if (railOpen) 230.dp else 72.dp, tween(180), label = "rail")
 
-    // Seule la section « TV en direct » garde l'aperçu vidéo en marche.
+    // Seule la section « TV » garde l'aperçu vidéo en marche.
     LaunchedEffect(selected) {
         if (selected != LIVE && !tv.fullscreen) tv.stop()
+    }
+    // Retour depuis le contenu : on revient au menu (confort de navigation)
+    androidx.activity.compose.BackHandler(enabled = !railOpen && !settingsOpen) {
+        runCatching { railFocus.requestFocus() }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -91,10 +96,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         Box(Modifier.fillMaxSize().padding(start = 76.dp, top = 18.dp, bottom = 12.dp, end = 24.dp)) {
             AnimatedContent(
                 targetState = selected,
-                transitionSpec = {
-                    (fadeIn(tween(260)) + androidx.compose.animation.slideInVertically(tween(320)) { it / 24 }) togetherWith
-                        fadeOut(tween(140))
-                },
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) },
                 label = "section",
             ) { s ->
                 when (s) {
@@ -104,49 +106,42 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     3 -> ReplaySection(nav, focusContent)
                     4 -> MoviesSection(nav, focusContent)
                     5 -> SeriesSection(nav, focusContent)
-                    6 -> FavoritesSection(nav, focusContent)
-                    else -> SettingsSection(nav)
+                    else -> FavoritesSection(nav, focusContent)
                 }
             }
         }
 
-        // Menu latéral flottant en verre : replié en icônes, il s'ouvre quand on y entre.
-        // Un indicateur lumineux glisse jusqu'à la section active.
-        val itemH = 40.dp
+        // Heure discrète en haut à droite
+        SmallClock(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 26.dp))
+
+        // Menu de gauche : replié en icônes, il s'ouvre avec les libellés par-dessus le contenu
+        // dès qu'on y entre. Paramètres est placé en bas, à part.
+        val itemH = 42.dp
         val gap = 4.dp
-        val headerH = 54.dp
-        val indicatorY by animateDpAsState(
-            headerH + (itemH + gap) * selected,
-            androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 380f),
-            label = "indicator",
-        )
+        val headerH = 58.dp
+        val indicatorY by animateDpAsState(headerH + (itemH + gap) * selected, tween(180), label = "indicator")
         Box(
             Modifier
                 .width(railWidth + 4.dp)
                 .fillMaxHeight()
-                .then(
-                    if (railOpen && AppTheme.richEffects) Modifier.shadow(30.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black, spotColor = Color.Black)
-                    else Modifier,
+                .background(
+                    if (railOpen) Brush.horizontalGradient(0.75f to RailBg, 1f to RailBg.copy(alpha = 0.92f))
+                    else Brush.horizontalGradient(listOf(RailBg, RailBg)),
                 )
-                .background(RailBg)
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
-                .padding(start = 14.dp, end = 10.dp, top = 22.dp, bottom = 14.dp),
+                .padding(start = 14.dp, end = 10.dp, top = 22.dp, bottom = 18.dp),
         ) {
-            // Indicateur de la section active
+            // Repère de la section active (visible même menu replié)
             Box(
-                Modifier
-                    .offset(y = indicatorY)
-                    .fillMaxWidth()
-                    .height(itemH)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0x26FFFFFF)),
+                Modifier.offset(y = indicatorY).fillMaxWidth().height(itemH)
+                    .clip(RoundedCornerShape(10.dp)).background(Color(0x1FFFFFFF)),
             )
-            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                 Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LogoMark(28.dp)
-                        AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                        AnimatedVisibility(railOpen, enter = fadeIn(tween(150)), exit = fadeOut(tween(100))) {
                             Text(
                                 "Tivihome", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
                                 letterSpacing = (-0.3).sp, modifier = Modifier.padding(start = 10.dp), maxLines = 1,
@@ -155,37 +150,89 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
                     }
                 }
                 sections.forEachIndexed { i, s ->
-                    val isSel = i == selected
-                    FocusBox(
-                        onClick = { selected = i },
-                        focusRequester = if (isSel) railFocus else null,
-                        background = Color.Transparent,
-                        focusedBackground = Color.White,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth().height(itemH),
-                    ) { focused ->
-                        Row(
-                            Modifier.fillMaxSize().padding(horizontal = 11.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                s.icon, s.label, modifier = Modifier.size(20.dp),
-                                tint = when { focused -> Bg; isSel -> Color.White; else -> TextDim },
-                            )
-                            AnimatedVisibility(railOpen, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                                Text(
-                                    s.label, maxLines = 1, fontSize = 15.sp,
-                                    fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = when { focused -> Bg; isSel -> Color.White; else -> TextDim },
-                                    modifier = Modifier.padding(start = 14.dp),
-                                )
-                            }
-                        }
-                    }
+                    RailItem(
+                        icon = s.icon, label = s.label, open = railOpen, selected = i == selected, height = itemH,
+                        requester = if (i == selected) railFocus else null,
+                        // Un simple passage sur l'entrée change de section, comme sur un décodeur
+                        onFocus = { if (selected != i) selected = i },
+                    ) { selected = i }
                 }
+                Spacer(Modifier.weight(1f))
+                RailItem(
+                    icon = Icons.Filled.Settings, label = "Paramètres", open = railOpen, selected = false, height = itemH,
+                    requester = settingsFocus,
+                ) { settingsOpen = true }
+            }
+        }
+
+        // Paramètres : panneau qui glisse depuis la droite
+        AnimatedVisibility(
+            visible = settingsOpen,
+            enter = fadeIn(tween(160)) + androidx.compose.animation.slideInHorizontally(tween(220)) { it / 3 },
+            exit = fadeOut(tween(140)) + androidx.compose.animation.slideOutHorizontally(tween(180)) { it / 3 },
+        ) {
+            SettingsPanel(nav, onClose = {
+                settingsOpen = false
+                runCatching { settingsFocus.requestFocus() }
+            })
+        }
+    }
+}
+
+@Composable
+private fun RailItem(
+    icon: ImageVector,
+    label: String,
+    open: Boolean,
+    selected: Boolean,
+    height: androidx.compose.ui.unit.Dp,
+    requester: androidx.compose.ui.focus.FocusRequester?,
+    onFocus: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    FocusBox(
+        onClick = onClick,
+        onFocus = onFocus,
+        focusRequester = requester,
+        background = Color.Transparent,
+        focusedBackground = Color.White,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth().height(height),
+    ) { focused ->
+        Row(Modifier.fillMaxSize().padding(horizontal = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                icon, label, modifier = Modifier.size(20.dp),
+                tint = when { focused -> Bg; selected -> Color.White; else -> TextDim },
+            )
+            if (open) {
+                Text(
+                    label, maxLines = 1, fontSize = 15.sp,
+                    fontWeight = if (selected || focused) FontWeight.SemiBold else FontWeight.Normal,
+                    color = when { focused -> Bg; selected -> Color.White; else -> TextDim },
+                    modifier = Modifier.padding(start = 16.dp),
+                )
             }
         }
     }
+}
+
+/** Heure discrète, sans fond, lisible sur n'importe quelle image grâce à une légère ombre. */
+@Composable
+fun SmallClock(modifier: Modifier = Modifier) {
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            kotlinx.coroutines.delay(60_000 - now % 60_000)
+        }
+    }
+    Text(
+        hm(now), modifier = modifier,
+        color = Color(0xE6FFFFFF), fontSize = 16.sp, fontWeight = FontWeight.Medium,
+        style = androidx.compose.ui.text.TextStyle(
+            shadow = androidx.compose.ui.graphics.Shadow(Color(0x99000000), blurRadius = 8f),
+        ),
+    )
 }
 
 /**

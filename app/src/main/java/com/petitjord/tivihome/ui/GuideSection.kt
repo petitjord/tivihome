@@ -194,10 +194,6 @@ private fun TvHeader(f: Focused?, nav: Nav, channels: List<Channel>, modifier: M
                     lineHeight = 18.sp, maxLines = 4, overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SmallAction("▦ Multi-écran") { nav.openMulti(channels) }
-            }
         }
     }
 }

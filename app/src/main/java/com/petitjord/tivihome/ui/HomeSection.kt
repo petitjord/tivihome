@@ -101,26 +101,17 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
     // Grande image du film à la une, en fond, jusqu'aux bords de l'écran
     HeroBackdrop(heroImg, if (onHero) 1f else 0.25f)
     Column(Modifier.fillMaxSize()) {
-    // En-tête fixe : toujours visible, même quand la liste défile
-    Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)) {
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    if (hour in 5..17) "Bonjour" else "Bonsoir",
-                    color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.weight(1f))
-                com.petitjord.tivihome.data.Updater.available?.let { v ->
-                    val scope = androidx.compose.runtime.rememberCoroutineScope()
-                    ActionButton(
-                        if (com.petitjord.tivihome.data.Updater.busy) com.petitjord.tivihome.data.Updater.status else "⬇  Mettre à jour (1.0.$v)",
-                        primary = true,
-                    ) {
-                        if (!com.petitjord.tivihome.data.Updater.busy) scope.launch { com.petitjord.tivihome.data.Updater.downloadAndInstall(ctx) }
-                    }
-                    Spacer(Modifier.width(20.dp))
-                }
-                Text(hm(now), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Light)
+    // En-tête : seulement le bouton de mise à jour quand il y en a une (l'heure est affichée en haut à droite)
+    com.petitjord.tivihome.data.Updater.available?.let { v ->
+        val scope2 = androidx.compose.runtime.rememberCoroutineScope()
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 70.dp, top = 2.dp), horizontalArrangement = Arrangement.End) {
+            ActionButton(
+                if (com.petitjord.tivihome.data.Updater.busy) com.petitjord.tivihome.data.Updater.status else "⬇  Mettre à jour (1.0.$v)",
+                primary = true,
+            ) {
+                if (!com.petitjord.tivihome.data.Updater.busy) scope2.launch { com.petitjord.tivihome.data.Updater.downloadAndInstall(ctx) }
             }
+        }
     }
     // Chaque rangée qui reçoit le focus vient se caler en haut, sous l'en-tête :
     // le carrousel est toujours affiché en entier et rien ne « saute ».
