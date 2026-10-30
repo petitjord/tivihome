@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 
 /** Couleurs d'accent proposées dans les réglages. */
 val AccentChoices = listOf(
@@ -29,9 +30,9 @@ object AppTheme {
 
 val Accent: Color get() = AccentChoices[AppTheme.accentIndex.coerceIn(0, AccentChoices.lastIndex)].second
 val AccentDim: Color get() = Accent.copy(alpha = 0.32f).compositeOn(if (AppTheme.oled) Color.Black else Color(0xFF141922))
-val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF111A2B)
-val Panel: Color get() = if (AppTheme.oled) Color(0xFF0C0C0C) else Color(0xFF17233A)
-val Panel2: Color get() = if (AppTheme.oled) Color(0xFF181818) else Color(0xFF1F2E4A)
+val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF0D1524)
+val Panel: Color get() = if (AppTheme.oled) Color(0xFF0C0C0C) else Color(0xFF152036)
+val Panel2: Color get() = if (AppTheme.oled) Color(0xFF181818) else Color(0xFF1D2B46)
 /** Barre de menu, un ton plus sombre que le contenu. */
 val RailBg: Color get() = if (AppTheme.oled) Color(0xFF080808) else Color(0xFF0C1422)
 val TextDim = Color(0xFF8A94A6)
@@ -61,6 +62,40 @@ private fun Color.compositeOn(bg: Color): Color {
     )
 }
 
+/** Police de l'appli : Inter si elle a été embarquée, sinon la police système. */
+object Fonts {
+    var family: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default
+        private set
+
+    fun init(ctx: android.content.Context) {
+        @Suppress("DiscouragedApi")
+        val id = ctx.resources.getIdentifier("inter_variable", "font", ctx.packageName)
+        if (id == 0) return
+        family = runCatching {
+            androidx.compose.ui.text.font.FontFamily(
+                listOf(300, 400, 500, 600, 700, 800).map { w ->
+                    androidx.compose.ui.text.font.Font(id, androidx.compose.ui.text.font.FontWeight(w))
+                },
+            )
+        }.getOrDefault(androidx.compose.ui.text.font.FontFamily.Default)
+    }
+}
+
+private fun typography(): androidx.compose.material3.Typography {
+    val f = Fonts.family
+    val t = androidx.compose.material3.Typography()
+    return androidx.compose.material3.Typography(
+        displayLarge = t.displayLarge.copy(fontFamily = f), displayMedium = t.displayMedium.copy(fontFamily = f),
+        displaySmall = t.displaySmall.copy(fontFamily = f), headlineLarge = t.headlineLarge.copy(fontFamily = f),
+        headlineMedium = t.headlineMedium.copy(fontFamily = f), headlineSmall = t.headlineSmall.copy(fontFamily = f),
+        titleLarge = t.titleLarge.copy(fontFamily = f), titleMedium = t.titleMedium.copy(fontFamily = f),
+        titleSmall = t.titleSmall.copy(fontFamily = f), bodyLarge = t.bodyLarge.copy(fontFamily = f, letterSpacing = 0.sp),
+        bodyMedium = t.bodyMedium.copy(fontFamily = f), bodySmall = t.bodySmall.copy(fontFamily = f),
+        labelLarge = t.labelLarge.copy(fontFamily = f), labelMedium = t.labelMedium.copy(fontFamily = f),
+        labelSmall = t.labelSmall.copy(fontFamily = f),
+    )
+}
+
 @Composable
 fun TiviTheme(content: @Composable () -> Unit) {
     MaterialTheme(
@@ -74,6 +109,7 @@ fun TiviTheme(content: @Composable () -> Unit) {
             surfaceVariant = Panel2,
             onSurfaceVariant = TextDim,
         ),
+        typography = typography(),
         content = content,
     )
 }

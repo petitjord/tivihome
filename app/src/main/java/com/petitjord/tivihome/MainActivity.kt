@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
             previous?.uncaughtException(t, e)
         }
         AppRepo.init(applicationContext)
+        com.petitjord.tivihome.ui.Fonts.init(applicationContext)
         // Logos et affiches chargés avec le même client réseau tolérant
         coil.Coil.setImageLoader(
             coil.ImageLoader.Builder(applicationContext)

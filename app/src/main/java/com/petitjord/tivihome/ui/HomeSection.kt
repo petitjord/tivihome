@@ -1,6 +1,10 @@
 package com.petitjord.tivihome.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -90,6 +94,12 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
     var firstAssigned = false
     fun takeFirst(): FocusRequester? = if (!firstAssigned) { firstAssigned = true; first } else null
 
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var heroImg by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val onHero by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+    Box(Modifier.fillMaxSize()) {
+    // Grande image du film à la une, en fond, jusqu'aux bords de l'écran
+    HeroBackdrop(heroImg, if (onHero) 1f else 0.25f)
     Column(Modifier.fillMaxSize()) {
     // En-tête fixe : toujours visible, même quand la liste défile
     Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)) {
@@ -114,7 +124,6 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
     }
     // Chaque rangée qui reçoit le focus vient se caler en haut, sous l'en-tête :
     // le carrousel est toujours affiché en entier et rien ne « saute ».
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var itemIndex = 0
     fun Modifier.snapOnFocus(index: Int) = this.onFocusChanged {
@@ -133,7 +142,7 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
         // À la une : carrousel des derniers films ajoutés
         if (featured.isNotEmpty()) {
             val idx = itemIndex++
-            item { Box(Modifier.snapOnFocus(idx)) { FeaturedCarousel(featured, nav, takeFirst()) } }
+            item { Box(Modifier.snapOnFocus(idx)) { FeaturedCarousel(featured, nav, takeFirst(), onBackdrop = { heroImg = it }) } }
         }
 
         if (upcoming.isNotEmpty()) {
@@ -234,6 +243,7 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
     }
 }
 }
+}
 
 /** Rangée d'affiches : l'affiche sélectionnée reste calée à gauche, la rangée défile dessous. */
 @OptIn(ExperimentalComposeUiApi::class)
@@ -314,7 +324,32 @@ private fun LiveCard(ch: Channel, now: Long, requester: FocusRequester?, onClick
 
 /** Grand bandeau « À la une » qui défile tout seul toutes les 8 secondes (sauf quand on y est). */
 @Composable
-private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequester?) {
+private fun HeroBackdrop(img: String?, target: Float) {
+    val a by androidx.compose.animation.core.animateFloatAsState(target, androidx.compose.animation.core.tween(450), label = "hero")
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.align(Alignment.TopEnd)
+                .offset(x = 24.dp, y = (-18).dp)
+                .requiredWidth(maxWidth * 0.76f + 24.dp)
+                .requiredHeight(430.dp)
+                .graphicsLayer { alpha = a },
+        ) {
+            if (img != null) {
+                coil.compose.AsyncImage(
+                    img, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize(),
+                )
+            }
+            // Fondus vers le fond : à gauche pour le texte, en bas pour les rangées
+            Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to Bg, 0.38f to Bg.copy(alpha = 0.55f), 0.75f to Color.Transparent)))
+            Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0.45f to Color.Transparent, 1f to Bg)))
+        }
+    }
+}
+
+/** À la une : titre, infos et boutons ; l'image du film est dessinée en fond par HeroBackdrop. */
+@Composable
+private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequester?, onBackdrop: (String?) -> Unit) {
     var index by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var hasFocus by remember { androidx.compose.runtime.mutableStateOf(false) }
     var focusedBtn by remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -327,11 +362,10 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
     val m = movies[index.coerceIn(0, movies.lastIndex)]
     val info = rememberLoad("vodinfo-${m.streamId}") { AppRepo.vodInfo(m) }
     val details = (info.state as? Load.Ok<com.petitjord.tivihome.data.MovieInfo>)?.data
+    LaunchedEffect(m.streamId, details) { onBackdrop(details?.backdrop ?: m.poster) }
 
     Box(
-        Modifier.fillMaxWidth().height(260.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
-            .border(1.dp, GlassStroke, androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+        Modifier.fillMaxWidth().height(286.dp)
             .onFocusChanged { hasFocus = it.hasFocus }
             // Défilement manuel : ▶ depuis « Détails » = film suivant, ◀ depuis « Lecture » = film précédent
             .onPreviewKeyEvent { ev ->
@@ -347,48 +381,28 @@ private fun FeaturedCarousel(movies: List<Movie>, nav: Nav, requester: FocusRequ
                 }
             },
     ) {
-        androidx.compose.animation.Crossfade(targetState = details?.backdrop ?: m.poster, animationSpec = androidx.compose.animation.core.tween(700), label = "hero") { img ->
-            Box(Modifier.fillMaxSize().background(Color(0xFF111622))) {
-                if (img != null) {
-                    coil.compose.AsyncImage(
-                        img, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+        Column(Modifier.align(Alignment.BottomStart).padding(bottom = 18.dp).fillMaxWidth(0.52f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("À LA UNE", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(
+                m.name, color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1).sp, lineHeight = 42.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            listOfNotNull(details?.year, details?.durationText, details?.genre?.substringBefore(","), (details?.rating ?: m.rating)?.takeIf { it.isNotBlank() && it != "0" }?.let { "★ $it" })
+                .filter { it.isNotBlank() }.joinToString("   ·   ").takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = Color(0xFFD7DCE5), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
-            }
-        }
-        // Dégradés de lisibilité
-        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xF00B0E13), Color(0xB30B0E13), Color(0x000B0E13)))))
-        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0x990B0E13)))))
-
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 32.dp, end = 32.dp).fillMaxWidth(0.55f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Accent, Accent2)), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 3.dp)) {
-                    Text("NOUVEAU", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                }
-                listOfNotNull(details?.year, details?.genre?.substringBefore(","), (details?.rating ?: m.rating)?.takeIf { it.isNotBlank() && it != "0" }?.let { "★ $it" })
-                    .joinToString("  ·  ").takeIf { it.isNotBlank() }?.let {
-                        Text("   $it", color = Color(0xFFD7DCE5), fontSize = 13.sp)
-                    }
-            }
-            Text(m.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            details?.plot?.let { Text(it, color = Color(0xFFC9D1DC), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp) }
+            details?.plot?.let { Text(it, color = Color(0xFFC3CBD8), fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp) }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
                 ActionButton("▶  Lecture", primary = true, requester = requester, onFocus = { focusedBtn = 0 }) { nav.playVod(movieItem(m)) }
                 ActionButton("Détails", onFocus = { focusedBtn = 1 }) { nav.openMovie(m) }
-                if (hasFocus) {
-                    Text(
-                        "◀ ▶  film précédent / suivant", color = TextDim, fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.CenterVertically).padding(start = 6.dp),
-                    )
-                }
             }
         }
-        // Points de pagination
-        Row(Modifier.align(Alignment.BottomEnd).padding(22.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Pagination + aide
+        Row(Modifier.align(Alignment.BottomEnd).padding(bottom = 30.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (hasFocus) Text("◀ ▶  ", color = TextDim, fontSize = 12.sp)
             movies.indices.forEach { i ->
-                val w by androidx.compose.animation.core.animateDpAsState(if (i == index) 22.dp else 7.dp, label = "dot")
-                Box(Modifier.width(w).height(7.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)).background(if (i == index) Accent else Color(0x66FFFFFF)))
+                val w by androidx.compose.animation.core.animateDpAsState(if (i == index) 24.dp else 6.dp, label = "dot")
+                Box(Modifier.width(w).height(6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp)).background(if (i == index) Color.White else Color(0x55FFFFFF)))
             }
         }
     }

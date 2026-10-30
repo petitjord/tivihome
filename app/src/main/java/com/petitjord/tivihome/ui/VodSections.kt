@@ -171,28 +171,29 @@ private fun <T> CatalogGrid(
 
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(groups, catId, onSelect = { catId = it })
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            // Fiche de l'élément survolé : texte à gauche, grande image nette à droite
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            // Fiche de l'élément survolé : grande image en fond, texte à gauche, rangée d'affiches par-dessus
             val hero = list.getOrNull(focusedIdx.coerceAtMost(list.lastIndex).coerceAtLeast(0))
             val det = rememberLoad(hero?.let(titleOf)) {
                 if (hero == null) null else { kotlinx.coroutines.delay(300); runCatching { detailsOf(hero) }.getOrNull() }
             }
             val d = (det.state as? Load.Ok<HeroDetails?>)?.data
+            val img = d?.backdrop ?: hero?.let(imageOf)
+            if (img != null) {
+                AsyncImage(
+                    img, null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                    modifier = Modifier.align(Alignment.TopEnd).fillMaxWidth(0.76f).fillMaxHeight(0.82f),
+                )
+            }
+            // Fondus vers le fond : à gauche pour le texte, en bas pour la rangée d'affiches
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0.16f to Bg, 0.46f to Bg.copy(alpha = 0.7f), 0.8f to Color.Transparent)))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.30f to Color.Transparent, 0.78f to Bg)))
+            Column(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxWidth().weight(1f)) {
-                val img = d?.backdrop ?: hero?.let(imageOf)
-                if (img != null) {
-                    AsyncImage(
-                        img, null, contentScale = ContentScale.Crop, alignment = Alignment.TopEnd,
-                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.66f).align(Alignment.TopEnd),
-                    )
-                }
-                // Fondu de l'image dans le fond, vers la gauche et vers le bas
-                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0.30f to Bg, 0.55f to Bg.copy(alpha = 0.75f), 1f to Color.Transparent)))
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Bg)))
                 Column(Modifier.fillMaxWidth(0.52f).padding(start = 16.dp, top = 6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
-                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        hero?.let(titleOf) ?: "", color = Color.White, fontSize = 32.sp, letterSpacing = (-0.8).sp,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 2, lineHeight = 36.sp, overflow = TextOverflow.Ellipsis,
                     )
                     val meta = listOfNotNull(d?.year, d?.duration, d?.genre, (d?.rating ?: hero?.let(metaOf))?.let { if (it.startsWith("★")) it else "★ $it" })
                         .filter { it.isNotBlank() }.joinToString("  ·  ")
@@ -240,6 +241,7 @@ private fun <T> CatalogGrid(
                         }
                     }
                 }
+            }
             }
         }
     }

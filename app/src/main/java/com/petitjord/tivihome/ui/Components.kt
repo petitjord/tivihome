@@ -96,7 +96,7 @@ fun FocusBox(
                 } else Modifier,
             )
             .background(bg, shape)
-            .border(2.dp, Accent.copy(alpha = glowAlpha), shape)
+            .border(2.dp, Color.White.copy(alpha = glowAlpha), shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused && !focused) focus?.invoke()

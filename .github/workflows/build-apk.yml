@@ -23,6 +23,13 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Police Inter (SIL Open Font License)
+        run: |
+          mkdir -p app/src/main/res/font
+          curl -fsSL -o app/src/main/res/font/inter_variable.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" \
+            || echo "Police indisponible : la police système sera utilisée"
+
       - name: Compiler
         run: |
           set -o pipefail
