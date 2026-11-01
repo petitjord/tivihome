@@ -35,6 +35,11 @@ class TvPlayer(ctx: Context) {
             .setUserAgent(com.petitjord.tivihome.data.Net.userAgent)
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http)))
+            .setLoadControl(
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(15_000, 50_000, 1_000, 2_000)
+                    .build(),
+            )
             .build()
             .apply { playWhenReady = true }
     }

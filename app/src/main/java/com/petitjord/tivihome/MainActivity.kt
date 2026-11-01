@@ -26,7 +26,16 @@ class MainActivity : ComponentActivity() {
         coil.Coil.setImageLoader(
             coil.ImageLoader.Builder(applicationContext)
                 .okHttpClient(com.petitjord.tivihome.data.Net.client)
-                .crossfade(true)
+                .crossfade(180)
+                .allowRgb565(true)
+                .respectCacheHeaders(false)
+                .memoryCache { coil.memory.MemoryCache.Builder(applicationContext).maxSizePercent(0.20).build() }
+                .diskCache {
+                    coil.disk.DiskCache.Builder()
+                        .directory(cacheDir.resolve("images"))
+                        .maxSizeBytes(200L * 1024 * 1024)
+                        .build()
+                }
                 .build(),
         )
         setContent {

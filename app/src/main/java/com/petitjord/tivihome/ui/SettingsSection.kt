@@ -124,7 +124,7 @@ private fun SettingsContent(cat: Int, nav: Nav) {
             Title("Données")
             Flow {
                 Choice("Actualiser les listes", false) {
-                    AppRepo.clearCache()
+                    AppRepo.refreshAll()
                     Toast.makeText(ctx, "Les listes seront rechargées", Toast.LENGTH_SHORT).show()
                 }
                 Choice("Se déconnecter", false) { nav.logout() }

@@ -326,7 +326,7 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
                 ) {
                     LiveDot(7.dp)
                     Spacer(Modifier.width(6.dp))
-                    Text("EN DIRECT", color = Color(0xFFFF8A95), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("EN DIRECT", color = Color(0xFFFF8A95), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
                 if (ch.favKey in AppRepo.favorites) {
                     Spacer(Modifier.width(10.dp)); Text("★", color = Gold, fontSize = 20.sp)
@@ -352,7 +352,7 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
         }
         Column(horizontalAlignment = Alignment.End) {
             if (index >= 0) Text("${index + 1} / $total", color = TextDim, fontSize = 13.sp)
-            Text("▲▼ zapper · OK liste · OK maintenu pistes · 0 précédente", color = TextDim, fontSize = 11.sp)
+            Text("▲▼ zapper · OK liste · OK maintenu pistes · 0 précédente", color = TextDim, fontSize = 12.sp)
         }
     }
 }

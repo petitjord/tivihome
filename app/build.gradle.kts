@@ -31,7 +31,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Optimisation R8 : code plus compact et plus rapide (surtout l'interface Compose)
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("tivi")
         }
         debug {

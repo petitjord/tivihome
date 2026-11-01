@@ -2,6 +2,7 @@ package com.petitjord.tivihome.data
 
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -24,6 +25,14 @@ class XtreamClient(val account: Account) {
 
     companion object {
         private val http get() = Net.client
+
+        /** Dossier du cache disque des listes (défini au démarrage). */
+        var cacheDir: java.io.File? = null
+        private val refreshScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
+        fun clearDiskCache() {
+            cacheDir?.let { java.io.File(it, "lists").deleteRecursively() }
+        }
 
         fun normalize(server: String): String {
             var u = server.trim()
@@ -58,6 +67,35 @@ class XtreamClient(val account: Account) {
                 r.body?.string() ?: ""
             }
         }
+
+    /**
+     * Grandes listes (chaînes, films, séries, catégories) : lues depuis le disque si disponibles,
+     * puis actualisées en arrière-plan quand elles ont plus d'une heure.
+     */
+    private suspend fun listApi(action: String): String {
+        val dir = cacheDir ?: return api(action)
+        val f = java.io.File(dir, "lists/${(base + account.username).hashCode()}_$action.json")
+        if (f.exists() && f.length() > 2) {
+            val age = System.currentTimeMillis() - f.lastModified()
+            if (age > 60 * 60_000L) {
+                refreshScope.launch { runCatching { save(f, api(action)) } }
+            }
+            if (age < 7 * 24 * 3_600_000L) {
+                return withContext(Dispatchers.IO) { f.readText() }
+            }
+        }
+        val body = api(action)
+        withContext(Dispatchers.IO) { save(f, body) }
+        return body
+    }
+
+    private fun save(f: java.io.File, body: String) {
+        if (!body.trimStart().startsWith("[")) return
+        f.parentFile?.mkdirs()
+        val tmp = java.io.File(f.parentFile, f.name + ".tmp")
+        tmp.writeText(body)
+        if (!tmp.renameTo(f)) { tmp.copyTo(f, overwrite = true); tmp.delete() }
+    }
 
     private fun array(body: String): JSONArray = try {
         JSONArray(body)
@@ -112,7 +150,7 @@ class XtreamClient(val account: Account) {
 
     suspend fun liveCategories() = categories("get_live_categories")
 
-    suspend fun liveStreams(): List<Channel> = array(api("get_live_streams")).mapObj { o ->
+    suspend fun liveStreams(): List<Channel> = array(listApi("get_live_streams")).mapObj { o ->
         Channel(
             streamId = o.optInt("stream_id"),
             num = o.optInt("num"),
@@ -147,7 +185,7 @@ class XtreamClient(val account: Account) {
 
     suspend fun vodCategories() = categories("get_vod_categories")
 
-    suspend fun vodStreams(): List<Movie> = array(api("get_vod_streams")).mapObj { o ->
+    suspend fun vodStreams(): List<Movie> = array(listApi("get_vod_streams")).mapObj { o ->
         Movie(
             streamId = o.optInt("stream_id"),
             name = o.optString("name").trim(),
@@ -163,7 +201,7 @@ class XtreamClient(val account: Account) {
 
     suspend fun seriesCategories() = categories("get_series_categories")
 
-    suspend fun seriesList(): List<Series> = array(api("get_series")).mapObj { o ->
+    suspend fun seriesList(): List<Series> = array(listApi("get_series")).mapObj { o ->
         Series(
             seriesId = o.optInt("series_id"),
             name = o.optString("name").trim(),
@@ -260,7 +298,7 @@ class XtreamClient(val account: Account) {
 
     // ---------- Utilitaires ----------
 
-    private suspend fun categories(action: String) = array(api(action)).mapObj { o ->
+    private suspend fun categories(action: String) = array(listApi(action)).mapObj { o ->
         Category(o.optString("category_id"), cleanName(o.optString("category_name")))
     }
 

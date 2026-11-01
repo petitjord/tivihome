@@ -84,8 +84,13 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
 
     val favChannels = remember(d, favs) { d.channels.filter { it.favKey in favs } }
     val lastChannel = remember(d) { d.channels.firstOrNull { it.streamId == AppRepo.lastChannelId } }
-    val liveRow = remember(favChannels, lastChannel) {
-        (listOfNotNull(lastChannel) + favChannels).distinct().take(20)
+    // Chaînes récentes d'abord, puis les favorites
+    val recentChannels = remember(d) {
+        val byId = d.channels.associateBy { it.streamId }
+        AppRepo.recentChannelIds.mapNotNull { byId[it] }
+    }
+    val liveRow = remember(favChannels, recentChannels, lastChannel) {
+        (recentChannels + listOfNotNull(lastChannel) + favChannels).distinct().take(24)
     }
     val recentMovies = remember(d) { d.movies.sortedByDescending { it.added }.take(20) }
     val recentSeries = remember(d) { d.series.sortedByDescending { it.added }.take(20) }
@@ -193,7 +198,7 @@ private fun HomeContent(d: HomeData, nav: Nav, focusContent: Boolean, onSeeAll: 
             item {
                 val req = takeFirst()
                 Column(Modifier.snapOnFocus(idx)) {
-                    SectionHeader(if (favChannels.isEmpty()) "Ta dernière chaîne" else "En ce moment sur tes chaînes", null)
+                    SectionHeader("En ce moment sur tes chaînes", null)
                     PivotRow {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp), modifier = Modifier.focusRestorer()) {
                             itemsIndexed(liveRow) { i, ch ->

@@ -93,6 +93,7 @@ object AppRepo {
         parentalPin = prefs.getString("pin", null)
         lockedGroups = prefs.getStringSet("lockedGroups", emptySet())!!.toSet()
         cacheDir = ctx.cacheDir
+        XtreamClient.cacheDir = ctx.filesDir
         favorites = prefs.getStringSet(k("favorites"), emptySet())!!.toSet()
         liveFormat = prefs.getString("liveFormat", "ts") ?: "ts"
         xmltvUrl = prefs.getString("xmltvUrl", "") ?: ""
@@ -283,10 +284,16 @@ object AppRepo {
     /** Dernière chaîne regardée et celle d'avant (pour la touche « précédente »). */
     val lastChannelId: Int get() = prefs.getInt("lastCh", -1)
     fun rememberChannel(id: Int) {
+        val recent = (listOf(id) + recentChannelIds.filter { it != id }).take(15)
+        prefs.edit().putString(k("recentCh"), recent.joinToString(",")).apply()
         val last = prefs.getInt("lastCh", -1)
         if (last == id) return
         prefs.edit().putInt("prevCh", last).putInt("lastCh", id).apply()
     }
+
+    /** Chaînes regardées récemment, de la plus récente à la plus ancienne. */
+    val recentChannelIds: List<Int>
+        get() = prefs.getString(k("recentCh"), "")!!.split(',').mapNotNull { it.toIntOrNull() }
     val previousChannelId: Int get() = prefs.getInt("prevCh", -1)
 
     fun toggleHiddenGroup(id: String): Boolean {
@@ -337,6 +344,12 @@ object AppRepo {
     fun logout() {
         prefs.edit().remove("server").remove("user").remove("pass").apply()
         client = null
+        clearCache()
+    }
+
+    /** « Actualiser les listes » : vide aussi le cache disque. */
+    fun refreshAll() {
+        XtreamClient.clearDiskCache()
         clearCache()
     }
 

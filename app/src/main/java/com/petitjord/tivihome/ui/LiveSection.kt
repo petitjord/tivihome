@@ -248,7 +248,7 @@ private fun ProgrammeInfo(ch: Channel) {
             if (current == null) {
                 Text("Pas d'information de programme", color = TextDim, fontSize = 13.sp)
             } else {
-                Text("EN CE MOMENT", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("EN CE MOMENT", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(current.title, color = Color.White, fontSize = 15.sp, maxLines = 2)
                 Text("${hm(current.start)} – ${hm(current.end)}", color = TextDim, fontSize = 12.sp)
                 LinearProgressIndicator(
@@ -259,7 +259,7 @@ private fun ProgrammeInfo(ch: Channel) {
                     Text(current.description, color = Color(0xFFB8C0CC), fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 }
                 s.data.firstOrNull { it.start >= current.end }?.let { next ->
-                    Text("ENSUITE", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    Text("ENSUITE", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                     Text("${hm(next.start)}  ${next.title}", color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }

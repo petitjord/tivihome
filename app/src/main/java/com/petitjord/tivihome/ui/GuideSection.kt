@@ -265,7 +265,7 @@ private fun GuideRow(
                 ch.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 color = if (playing) Accent else Color.White,
             )
-            if (fav) Text("★", color = Gold, fontSize = 11.sp)
+            if (fav) Text("★", color = Gold, fontSize = 12.sp)
         }
 
         Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hScroll)) {
