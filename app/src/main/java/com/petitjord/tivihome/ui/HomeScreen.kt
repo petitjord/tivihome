@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +83,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
     var settingsOpen by remember { mutableStateOf(false) }
     val railFocus = rememberInitialFocus(!focusContent)
     val settingsFocus = remember { androidx.compose.ui.focus.FocusRequester() }
-    val railWidth by animateDpAsState(if (railOpen) 230.dp else 72.dp, tween(180), label = "rail")
+    val contentFocus = remember { androidx.compose.ui.focus.FocusRequester() }
 
     // Seule la section « TV » garde l'aperçu vidéo en marche.
     LaunchedEffect(selected) {
@@ -94,7 +96,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 
     Box(Modifier.fillMaxSize()) {
         // Contenu, décalé de la largeur du menu replié (marges de sécurité TV en haut, bas et droite)
-        Box(Modifier.fillMaxSize().padding(start = 98.dp, top = 18.dp, bottom = 12.dp, end = 24.dp)) {
+        Box(Modifier.fillMaxSize().padding(start = 28.dp, top = 18.dp, bottom = 12.dp, end = 24.dp).focusRequester(contentFocus).focusGroup()) {
             AnimatedContent(
                 targetState = selected,
                 transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) },
@@ -115,54 +117,47 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         // Heure discrète en haut à droite
         SmallClock(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 26.dp))
 
-        // Menu de gauche : replié en icônes, il s'ouvre avec les libellés par-dessus le contenu
-        // dès qu'on y entre. Paramètres est placé en bas, à part.
-        val itemH = 42.dp
-        val gap = 4.dp
-        val headerH = 58.dp
-        val indicatorY by animateDpAsState(headerH + (itemH + gap) * selected, tween(180), label = "indicator")
-        Box(
-            Modifier
-                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
-                .width(railWidth)
-                .fillMaxHeight()
-                // Barre flottante en verre : sombre et plus opaque quand elle s'ouvre par-dessus le contenu
-                .clip(RoundedCornerShape(24.dp))
-                .background(if (railOpen) GlassDark else RailBg)
-                .border(1.dp, GlassStroke, RoundedCornerShape(24.dp))
-                .onFocusChanged { railOpen = it.hasFocus }
-                .focusGroup()
-                .padding(start = 10.dp, end = 10.dp, top = 16.dp, bottom = 12.dp),
+        // Dock flottant en verre, centré en bas. Il se range sous l'écran quand on navigue dans le
+        // contenu, et revient avec Retour (ou en descendant tout en bas).
+        val dockShift by animateDpAsState(if (railOpen) 0.dp else 120.dp, tween(220), label = "dock")
+        var dockLabel by remember { mutableStateOf("") }
+        Column(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp)
+                .graphicsLayer { translationY = dockShift.toPx(); alpha = if (dockShift >= 119.dp) 0f else 1f },
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Repère de la section active (visible même menu replié)
+            // Nom de l'icône sélectionnée, au-dessus du dock
             Box(
-                Modifier.offset(y = indicatorY).fillMaxWidth().height(itemH)
-                    .clip(RoundedCornerShape(14.dp)).background(Color(0x1FFFFFFF)),
-            )
-            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
-                Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LogoMark(28.dp)
-                        AnimatedVisibility(railOpen, enter = fadeIn(tween(150)), exit = fadeOut(tween(100))) {
-                            Text(
-                                "Tivihome", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.3).sp, modifier = Modifier.padding(start = 10.dp), maxLines = 1,
-                            )
-                        }
-                    }
-                }
+                Modifier.padding(bottom = 10.dp).clip(RoundedCornerShape(12.dp)).background(GlassDark)
+                    .border(1.dp, GlassStroke, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 5.dp),
+            ) {
+                Text(dockLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(GlassDark)
+                    .border(1.dp, GlassStroke, RoundedCornerShape(30.dp))
+                    .onFocusChanged { railOpen = it.hasFocus }
+                    .focusGroup()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(Modifier.padding(horizontal = 4.dp)) { LogoMark(30.dp) }
+                DockDivider()
                 sections.forEachIndexed { i, s ->
-                    RailItem(
-                        icon = s.icon, label = s.label, open = railOpen, selected = i == selected, height = itemH,
+                    DockItem(
+                        icon = s.icon, label = s.label, selected = i == selected,
                         requester = if (i == selected) railFocus else null,
-                        // Un simple passage sur l'entrée change de section, comme sur un décodeur
-                        onFocus = { if (selected != i) selected = i },
-                    ) { selected = i }
+                        // Un simple passage sur l'icône change de section
+                        onFocus = { dockLabel = s.label; if (selected != i) selected = i },
+                    ) { selected = i; runCatching { contentFocus.requestFocus() } }
                 }
-                Spacer(Modifier.weight(1f))
-                RailItem(
-                    icon = Icons.Filled.Settings, label = "Paramètres", open = railOpen, selected = false, height = itemH,
-                    requester = settingsFocus,
+                DockDivider()
+                DockItem(
+                    icon = Icons.Filled.Settings, label = "Paramètres", selected = false,
+                    requester = settingsFocus, onFocus = { dockLabel = "Paramètres" },
                 ) { settingsOpen = true }
             }
         }
@@ -182,40 +177,40 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 }
 
 @Composable
-private fun RailItem(
+private fun DockItem(
     icon: ImageVector,
     label: String,
-    open: Boolean,
     selected: Boolean,
-    height: androidx.compose.ui.unit.Dp,
     requester: androidx.compose.ui.focus.FocusRequester?,
     onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    FocusBox(
-        onClick = onClick,
-        onFocus = onFocus,
-        focusRequester = requester,
-        background = Color.Transparent,
-        focusedBackground = Color.White,
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth().height(height),
-    ) { focused ->
-        Row(Modifier.fillMaxSize().padding(horizontal = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                icon, label, modifier = Modifier.size(20.dp),
-                tint = when { focused -> Bg; selected -> Color.White; else -> TextDim },
-            )
-            if (open) {
-                Text(
-                    label, maxLines = 1, fontSize = 15.sp,
-                    fontWeight = if (selected || focused) FontWeight.SemiBold else FontWeight.Normal,
-                    color = when { focused -> Bg; selected -> Color.White; else -> TextDim },
-                    modifier = Modifier.padding(start = 16.dp),
-                )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FocusBox(
+            onClick = onClick,
+            onFocus = onFocus,
+            focusRequester = requester,
+            background = if (selected) Color(0x2EFFFFFF) else Color(0x14FFFFFF),
+            focusedBackground = Color.White,
+            scaleOnFocus = 1.18f,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.size(54.dp),
+        ) { focused ->
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(icon, label, modifier = Modifier.size(24.dp), tint = if (focused) Bg else Color.White)
             }
         }
+        // Point sous la section active, comme une appli ouverte
+        Box(
+            Modifier.padding(top = 5.dp).size(4.dp).clip(RoundedCornerShape(2.dp))
+                .background(if (selected) Color.White else Color.Transparent),
+        )
     }
+}
+
+@Composable
+private fun DockDivider() {
+    Box(Modifier.width(1.dp).height(36.dp).background(Color(0x33FFFFFF)))
 }
 
 /** Heure discrète, sans fond, lisible sur n'importe quelle image grâce à une légère ombre. */
