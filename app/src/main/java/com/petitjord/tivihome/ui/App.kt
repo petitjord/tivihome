@@ -75,7 +75,7 @@ fun App() {
         crash?.let { c ->
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { AppRepo.clearCrash(); crash = null },
-                containerColor = Panel,
+                containerColor = PanelSolid,
                 title = { Text("Tivihome s'est fermé la dernière fois", color = Color.White) },
                 text = {
                     Text(

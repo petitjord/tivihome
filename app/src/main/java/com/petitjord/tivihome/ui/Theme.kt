@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.sp
 
 /** Couleurs d'accent proposées dans les réglages. */
 val AccentChoices = listOf(
-    "Bleu" to Color(0xFF3DB2FF),
+    "Bleu" to Color(0xFF0A84FF),
     "Violet" to Color(0xFF9B7BFF),
     "Vert" to Color(0xFF3DDC97),
     "Orange" to Color(0xFFFF9F43),
@@ -29,13 +29,16 @@ object AppTheme {
 }
 
 val Accent: Color get() = AccentChoices[AppTheme.accentIndex.coerceIn(0, AccentChoices.lastIndex)].second
-val AccentDim: Color get() = Accent.copy(alpha = 0.32f).compositeOn(if (AppTheme.oled) Color.Black else Color(0xFF141922))
-val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF0D1524)
-val Panel: Color get() = if (AppTheme.oled) Color(0xFF0C0C0C) else Color(0xFF152036)
-val Panel2: Color get() = if (AppTheme.oled) Color(0xFF181818) else Color(0xFF1D2B46)
-/** Barre de menu, un ton plus sombre que le contenu. */
-val RailBg: Color get() = if (AppTheme.oled) Color(0xFF080808) else Color(0xFF0C1422)
-val TextDim = Color(0xFF8A94A6)
+val AccentDim: Color get() = Color(0x2EFFFFFF)
+val Bg: Color get() = if (AppTheme.oled) Color.Black else Color(0xFF0B0C10)
+/** Surfaces « verre » : blanc translucide, laisse voir l'image derrière. */
+val Panel: Color get() = Color(0x14FFFFFF)
+val Panel2: Color get() = Color(0x24FFFFFF)
+/** Surface opaque (boîtes de dialogue). */
+val PanelSolid: Color get() = if (AppTheme.oled) Color(0xFF121212) else Color(0xFF1B1C22)
+/** Barre de menu : verre sombre. */
+val RailBg: Color get() = Color(0xB3121318)
+val TextDim = Color(0xFF9A9CA6)
 
 /** Seconde teinte d'accent pour les dégradés (décalée vers le violet). */
 val Accent2: Color get() = Color(
@@ -47,8 +50,9 @@ val Accent2: Color get() = Color(
 // Surfaces « verre » : translucides, laissent voir le fond animé
 val Glass: Color get() = Panel
 val GlassStrong: Color get() = Panel2
-val GlassStroke = Color(0x00FFFFFF)
-val GlassDark = Color(0xB30A0D12)
+/** Fin liseré clair sur le bord des panneaux de verre. */
+val GlassStroke = Color(0x24FFFFFF)
+val GlassDark = Color(0xE6141418)
 val Gold = Color(0xFFFFC94D)
 
 /** Mélange une couleur semi-transparente sur un fond opaque. */

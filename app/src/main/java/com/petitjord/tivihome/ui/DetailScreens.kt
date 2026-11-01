@@ -143,14 +143,17 @@ fun ActionButton(
         onClick = onClick,
         onFocus = onFocus,
         focusRequester = requester,
-        background = if (primary) Accent else Color(0x33FFFFFF),
-        focusedBackground = if (primary) Accent else Color(0x55FFFFFF),
-        scaleOnFocus = 1.06f,
-        shape = RoundedCornerShape(24.dp),
+        background = if (primary) Color(0xF2FFFFFF) else Color(0x29FFFFFF),
+        focusedBackground = Color.White,
+        scaleOnFocus = 1.07f,
+        shape = RoundedCornerShape(26.dp),
         modifier = Modifier.height(48.dp),
-    ) {
-        Box(Modifier.padding(horizontal = 22.dp).height(48.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = if (primary) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    ) { focused ->
+        Box(Modifier.padding(horizontal = 24.dp).height(48.dp), contentAlignment = Alignment.Center) {
+            Text(
+                label, color = if (primary || focused) Color.Black else Color.White,
+                fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            )
         }
     }
 }

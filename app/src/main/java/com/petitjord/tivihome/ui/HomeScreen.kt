@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,7 +94,7 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
 
     Box(Modifier.fillMaxSize()) {
         // Contenu, décalé de la largeur du menu replié (marges de sécurité TV en haut, bas et droite)
-        Box(Modifier.fillMaxSize().padding(start = 76.dp, top = 18.dp, bottom = 12.dp, end = 24.dp)) {
+        Box(Modifier.fillMaxSize().padding(start = 98.dp, top = 18.dp, bottom = 12.dp, end = 24.dp)) {
             AnimatedContent(
                 targetState = selected,
                 transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) },
@@ -122,20 +123,21 @@ fun HomeScreen(nav: Nav, focusContent: Boolean) {
         val indicatorY by animateDpAsState(headerH + (itemH + gap) * selected, tween(180), label = "indicator")
         Box(
             Modifier
-                .width(railWidth + 4.dp)
+                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+                .width(railWidth)
                 .fillMaxHeight()
-                .background(
-                    if (railOpen) Brush.horizontalGradient(0.75f to RailBg, 1f to RailBg.copy(alpha = 0.92f))
-                    else Brush.horizontalGradient(listOf(RailBg, RailBg)),
-                )
+                // Barre flottante en verre : sombre et plus opaque quand elle s'ouvre par-dessus le contenu
+                .clip(RoundedCornerShape(24.dp))
+                .background(if (railOpen) GlassDark else RailBg)
+                .border(1.dp, GlassStroke, RoundedCornerShape(24.dp))
                 .onFocusChanged { railOpen = it.hasFocus }
                 .focusGroup()
-                .padding(start = 14.dp, end = 10.dp, top = 22.dp, bottom = 18.dp),
+                .padding(start = 10.dp, end = 10.dp, top = 16.dp, bottom = 12.dp),
         ) {
             // Repère de la section active (visible même menu replié)
             Box(
                 Modifier.offset(y = indicatorY).fillMaxWidth().height(itemH)
-                    .clip(RoundedCornerShape(10.dp)).background(Color(0x1FFFFFFF)),
+                    .clip(RoundedCornerShape(14.dp)).background(Color(0x1FFFFFFF)),
             )
             Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                 Box(Modifier.height(headerH - gap).padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
@@ -196,7 +198,7 @@ private fun RailItem(
         focusRequester = requester,
         background = Color.Transparent,
         focusedBackground = Color.White,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().height(height),
     ) { focused ->
         Row(Modifier.fillMaxSize().padding(horizontal = 11.dp), verticalAlignment = Alignment.CenterVertically) {

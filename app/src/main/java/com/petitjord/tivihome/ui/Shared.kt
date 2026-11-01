@@ -77,7 +77,7 @@ fun CategoryColumn(
     menuFor?.let { g -> GroupMenu(g, onDismiss = { menuFor = null }, onChanged = { if (AppRepo.groupInvisible(g.id)) onSelect(ALL) }) }
     LazyColumn(
         state = state,
-        modifier = modifier.width(220.dp).fillMaxHeight().background(RailBg).focusRestorer(),
+        modifier = modifier.width(220.dp).fillMaxHeight().glass(RoundedCornerShape(22.dp)).focusRestorer(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {

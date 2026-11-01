@@ -55,11 +55,11 @@ fun SettingsPanel(nav: Nav, onClose: () -> Unit) {
     var lastCat by remember { mutableIntStateOf(0) }
     androidx.activity.compose.BackHandler { if (cat != null) cat = null else onClose() }
 
-    Box(Modifier.fillMaxSize().background(Color(0x8C000000))) {
+    Box(Modifier.fillMaxSize().background(Color(0x66000000))) {
         Column(
-            Modifier.align(Alignment.CenterEnd).width(500.dp).fillMaxHeight()
-                .background(Panel)
-                .padding(start = 28.dp, end = 32.dp, top = 28.dp, bottom = 20.dp),
+            Modifier.align(Alignment.CenterEnd).padding(top = 18.dp, bottom = 18.dp, end = 18.dp).width(480.dp).fillMaxHeight()
+                .glass(androidx.compose.foundation.shape.RoundedCornerShape(28.dp), strong = true)
+                .padding(start = 28.dp, end = 28.dp, top = 28.dp, bottom = 20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (cat != null) Text("‹  ", color = TextDim, fontSize = 22.sp)

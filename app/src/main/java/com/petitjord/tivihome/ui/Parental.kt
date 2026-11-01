@@ -51,7 +51,7 @@ fun PinDialog(title: String, onDismiss: () -> Unit, onSuccess: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Panel,
+        containerColor = PanelSolid,
         title = { Text(title, color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,7 +87,7 @@ fun GroupMenu(group: Category, onDismiss: () -> Unit, onChanged: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Panel,
+        containerColor = PanelSolid,
         title = { Text(group.name, color = Color.White) },
         text = {
             Text(

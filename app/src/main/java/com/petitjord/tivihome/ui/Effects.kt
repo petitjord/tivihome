@@ -46,15 +46,12 @@ fun AuroraBackground(modifier: Modifier = Modifier) {
 @Composable
 private fun StaticAurora(modifier: Modifier) {
     val base = Bg
-    val a1 = Accent
     val oled = AppTheme.oled
     Canvas(modifier.fillMaxSize()) {
         drawRect(base)
         if (oled) return@Canvas
         val w = size.width; val h = size.height
-        // Lumière douce en haut à gauche, assombrissement vers le bas
-        drawRect(Brush.radialGradient(listOf(a1.copy(alpha = 0.10f), Color.Transparent), center = Offset(w * 0.08f, 0f), radius = w * 0.6f))
-        drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x66000000)), startY = h * 0.4f, endY = h))
+        drawRect(Brush.radialGradient(listOf(Color(0x14FFFFFF), Color.Transparent), center = Offset(w * 0.3f, -h * 0.1f), radius = w * 0.7f))
     }
 }
 
@@ -81,9 +78,9 @@ private fun AnimatedAurora(modifier: Modifier) {
 }
 
 /** Panneau en verre : fond translucide, fine bordure lumineuse, coins arrondis. */
-fun Modifier.glass(shape: Shape = RoundedCornerShape(20.dp), strong: Boolean = false): Modifier =
+fun Modifier.glass(shape: Shape = RoundedCornerShape(22.dp), strong: Boolean = false): Modifier =
     this.clip(shape)
-        .background(if (strong) GlassStrong else Glass, shape)
+        .background(if (strong) GlassDark else Glass, shape)
         .border(1.dp, GlassStroke, shape)
 
 /** Pinceau scintillant pour les squelettes de chargement. */

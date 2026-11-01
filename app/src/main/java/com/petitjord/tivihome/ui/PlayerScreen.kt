@@ -256,10 +256,11 @@ private fun ChannelOverlay(onPick: (List<Channel>, Int) -> Unit, onFav: (Channel
 
     Column(
         Modifier
-            .width(440.dp)
+            .padding(start = 20.dp, top = 20.dp, bottom = 20.dp)
+            .width(420.dp)
             .fillMaxHeight()
-            .background(Brush.horizontalGradient(listOf(Color(0xF20B0E13), Color(0xE60B0E13), Color(0x000B0E13))))
-            .padding(start = 24.dp, top = 24.dp, end = 40.dp),
+            .glass(RoundedCornerShape(28.dp), strong = true)
+            .padding(start = 18.dp, top = 22.dp, end = 18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
             LogoMark(22.dp)
@@ -302,8 +303,9 @@ private fun LiveInfoBar(ch: Channel, index: Int, total: Int) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC05070A), Color(0xF205070A))))
-            .padding(start = 48.dp, end = 48.dp, top = 70.dp, bottom = 36.dp),
+            .padding(start = 36.dp, end = 36.dp, bottom = 28.dp)
+            .glass(RoundedCornerShape(28.dp), strong = true)
+            .padding(horizontal = 26.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ChannelLogo(ch.icon, ch.name, Modifier.size(width = 170.dp, height = 108.dp))
@@ -480,9 +482,9 @@ fun TracksPanel(onClose: () -> Unit) {
     val first = rememberInitialFocus(true)
 
     Column(
-        Modifier.width(380.dp).fillMaxHeight()
-            .background(Brush.horizontalGradient(listOf(Color(0x000B0E13), Color(0xE60B0E13), Color(0xF20B0E13))))
-            .padding(start = 40.dp, top = 28.dp, end = 24.dp),
+        Modifier.padding(top = 20.dp, bottom = 20.dp, end = 20.dp).width(360.dp).fillMaxHeight()
+            .glass(RoundedCornerShape(28.dp), strong = true)
+            .padding(start = 24.dp, top = 24.dp, end = 20.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text("Audio", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
